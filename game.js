@@ -2396,6 +2396,9 @@ const state = {
   dailyChallenge: null,          // today's challenge object
   dailyChallengeHidden: false,   // dismissed by tapping X
   signinPrompt: false,           // show "sign in" overlay for guests
+  eggTaps: 0,                    // secret cloud easter egg tap counter
+  eggLastTap: 0,                 // timestamp of last egg tap
+  eggFlash: 0,                   // seconds remaining on "SECRET UNLOCKED" flash
   newAchievements: [],           // achievements unlocked since last start screen visit
   dailyChallengeJustCompleted: false,
   runStarCount:       0,         // stars collected this run
@@ -2691,6 +2694,31 @@ function handleTap(x, y) {
   if (state.screen === 'start'       && hitButton(WHEEL_BTN,         x, y)) {
     if (state.authUser?.isGuest) { state.signinPrompt = true; return; }
     state.wheelShowResult=false; state.screen='wheel';
+  }
+  // 🥚 Easter egg: tap the right cloud (330, 355) 7 times to unlock everything
+  if (state.screen === 'start' && Math.abs(x - 330) < 60 && Math.abs(y - 355) < 40) {
+    const now = Date.now();
+    if (now - state.eggLastTap > 2000) state.eggTaps = 0; // reset if too slow
+    state.eggTaps++;
+    state.eggLastTap = now;
+    if (state.eggTaps >= 7) {
+      state.eggTaps = 0;
+      const allRockets = ROCKETS.map(r => r.id);
+      const allTails   = TAILS.map(t => t.id);
+      const allBgs     = ['classic','nebula','aurora','deep','supernova','void','galactic',
+                          'storm','cosmic','solar','abyss_bg','sakura_bg','crystal_bg',
+                          'glacial_bg','sports_bg','royale_bg','neoncity_bg','candy_bg'];
+      const allPacks   = PACKS.map(p => p.id);
+      state.unlockedRockets = allRockets;
+      state.unlockedTails   = allTails;
+      state.unlockedBgs     = allBgs;
+      state.unlockedPacks   = allPacks;
+      saveUnlocked(allRockets);
+      saveUnlockedTails(allTails);
+      saveUnlockedBgs(allBgs);
+      localStorage.setItem('jtj_unlocked_packs', JSON.stringify(allPacks));
+      state.eggFlash = 3.0; // show flash for 3 seconds
+    }
   }
   // Dismiss sign-in prompt on any tap
   if (state.signinPrompt) {
@@ -3110,6 +3138,7 @@ function update(delta) {
 
   // Tick daily bonus popup countdown on start screen
   if (state.dailyBonus && state.dailyBonus.life > 0) state.dailyBonus.life -= delta;
+  if (state.eggFlash > 0) state.eggFlash -= delta;
   // Tick achievement popup
   if (state.achPopupLife > 0) { state.achPopupLife -= delta; if (state.achPopupLife <= 0) { state.newAchievements.shift(); state.achPopupLife = 0; } }
 
@@ -3465,6 +3494,7 @@ function draw() {
   if (state.screen === 'start') {
     drawStartScreen();
     if (state.signinPrompt) drawSignInPrompt();
+    if (state.eggFlash > 0) drawEggFlash();
     return;
   }
 
@@ -4581,6 +4611,32 @@ function drawLeaderboardScreen() {
 
   // Back button
   drawMenuButton(LEADERBOARD_BACK, '← BACK', '#1a1a60', '#2828a0', '#8888ff');
+}
+
+// ── Easter egg unlock flash ────────────────────
+function drawEggFlash() {
+  const alpha = Math.min(1, state.eggFlash, (3 - state.eggFlash + 0.3) * 5);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  // Banner
+  const bw = 280, bh = 54, bx = CANVAS_W / 2 - bw / 2, by = CANVAS_H / 2 - bh / 2;
+  ctx.fillStyle = 'rgba(20, 10, 0, 0.92)';
+  ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 14); ctx.fill();
+  ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 14); ctx.stroke();
+
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle    = '#ffd700';
+  ctx.font         = 'bold 14px monospace';
+  ctx.fillText('⭐  SECRET UNLOCKED  ⭐', CANVAS_W / 2, by + bh / 2 - 8);
+  ctx.fillStyle = 'rgba(255,220,100,0.75)';
+  ctx.font      = '11px monospace';
+  ctx.fillText('Everything in the shop is yours!', CANVAS_W / 2, by + bh / 2 + 12);
+
+  ctx.restore();
+  ctx.textBaseline = 'alphabetic';
 }
 
 // ── Sign-in prompt (guest restriction) ────────
