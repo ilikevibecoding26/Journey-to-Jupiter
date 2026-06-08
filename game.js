@@ -2395,6 +2395,7 @@ const state = {
   firstRunBonus: false,          // true → all coins ×2 for first game of the day
   dailyChallenge: null,          // today's challenge object
   dailyChallengeHidden: false,   // dismissed by tapping X
+  signinPrompt: false,           // show "sign in" overlay for guests
   newAchievements: [],           // achievements unlocked since last start screen visit
   dailyChallengeJustCompleted: false,
   runStarCount:       0,         // stars collected this run
@@ -2681,10 +2682,21 @@ function handleTap(x, y) {
   if (state.screen === 'start'       && hitButton(LAUNCH_BTN,       x, y)) beginLaunch();
   if (state.screen === 'start'       && hitButton(SETTINGS_BTN,     x, y)) state.screen = 'settings';
   if (state.screen === 'start'       && hitButton(LEADERBOARD_BTN,  x, y)) { state.screen = 'leaderboard'; fetchGlobalLeaderboard(); }
-  if (state.screen === 'start'       && hitButton(SHOP_BTN,          x, y)) state.screen = 'shop';
+  if (state.screen === 'start'       && hitButton(SHOP_BTN,          x, y)) {
+    if (state.authUser?.isGuest) { state.signinPrompt = true; return; }
+    state.screen = 'shop';
+  }
   if (state.screen === 'start'       && hitButton(PROFILE_BTN,       x, y)) { saveCurrentProfileData(); state.screen = 'profile'; }
   if (state.screen === 'start'       && hitButton(TUTORIAL_BTN,      x, y)) state.screen = 'tutorial';
-  if (state.screen === 'start'       && hitButton(WHEEL_BTN,         x, y)) { state.wheelShowResult=false; state.screen='wheel'; }
+  if (state.screen === 'start'       && hitButton(WHEEL_BTN,         x, y)) {
+    if (state.authUser?.isGuest) { state.signinPrompt = true; return; }
+    state.wheelShowResult=false; state.screen='wheel';
+  }
+  // Dismiss sign-in prompt on any tap
+  if (state.signinPrompt) {
+    state.signinPrompt = false;
+    return;
+  }
   if (state.screen === 'wheel') {
     // Tap SPIN button area
     if(!state.wheelSpinning && !state.wheelShowResult && y>CANVAS_H-134 && y<CANVAS_H-86) startWheelSpin();
@@ -3452,6 +3464,7 @@ function draw() {
 
   if (state.screen === 'start') {
     drawStartScreen();
+    if (state.signinPrompt) drawSignInPrompt();
     return;
   }
 
@@ -4568,6 +4581,47 @@ function drawLeaderboardScreen() {
 
   // Back button
   drawMenuButton(LEADERBOARD_BACK, '← BACK', '#1a1a60', '#2828a0', '#8888ff');
+}
+
+// ── Sign-in prompt (guest restriction) ────────
+function drawSignInPrompt() {
+  // Dim overlay
+  ctx.fillStyle = 'rgba(0, 0, 10, 0.72)';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  // Panel
+  const pw = 280, ph = 200, px = CANVAS_W / 2 - pw / 2, py = CANVAS_H / 2 - ph / 2;
+  ctx.fillStyle = 'rgba(0, 0, 30, 0.95)';
+  ctx.beginPath();
+  ctx.roundRect(px, py, pw, ph, 20);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255, 180, 60, 0.6)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Lock icon
+  ctx.font         = '36px monospace';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🔒', CANVAS_W / 2, py + 52);
+
+  // Title
+  ctx.fillStyle = '#ffd060';
+  ctx.font      = 'bold 22px monospace';
+  ctx.fillText('SIGN IN', CANVAS_W / 2, py + 98);
+
+  // Subtitle
+  ctx.fillStyle = 'rgba(180, 180, 220, 0.85)';
+  ctx.font      = '12px monospace';
+  ctx.fillText('Create an account to access', CANVAS_W / 2, py + 126);
+  ctx.fillText('all features.', CANVAS_W / 2, py + 144);
+
+  // Tap-anywhere hint
+  ctx.fillStyle = 'rgba(120, 120, 160, 0.7)';
+  ctx.font      = '11px monospace';
+  ctx.fillText('tap anywhere to dismiss', CANVAS_W / 2, py + 174);
+
+  ctx.textBaseline = 'alphabetic';
 }
 
 // ── Tutorial screen ────────────────────────────
