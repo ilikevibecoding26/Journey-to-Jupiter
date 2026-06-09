@@ -5020,13 +5020,31 @@ function submitAuth(){
     if(accounts[uname]){ state.authError='Username taken'; state.authLoading=false; return; }
     accounts[uname]={pinHash};
     saveLocalAccounts(accounts);
-    // Try to sync to Supabase in background (best effort, non-blocking)
+    // Sync to Supabase (best effort)
     try { supaInsert('jtj_players',{username:uname,pin_hash:pinHash}); } catch(e){}
+    finishAuth(uname);
   } else {
-    if(!accounts[uname]){ state.authError='User not found'; state.authLoading=false; return; }
-    if(accounts[uname].pinHash!==pinHash){ state.authError='Wrong PIN'; state.authLoading=false; return; }
+    if(accounts[uname]){
+      // Found locally
+      if(accounts[uname].pinHash!==pinHash){ state.authError='Wrong PIN'; state.authLoading=false; return; }
+      finishAuth(uname);
+    } else {
+      // Not in localStorage — check Supabase (handles cross-device login)
+      supaSelect('jtj_players', { username: uname })
+        .then(rows => {
+          if(!rows || rows.length===0){ state.authError='User not found'; state.authLoading=false; return; }
+          if(rows[0].pin_hash!==pinHash){ state.authError='Wrong PIN'; state.authLoading=false; return; }
+          // Cache locally for next time
+          accounts[uname]={pinHash};
+          saveLocalAccounts(accounts);
+          finishAuth(uname);
+        })
+        .catch(()=>{ state.authError='Network error — try again'; state.authLoading=false; });
+    }
   }
+}
 
+function finishAuth(uname){
   const session={username:uname};
   saveAuthSession(session); state.authUser=session;
   loadOrCreateProfileForUser(uname);
