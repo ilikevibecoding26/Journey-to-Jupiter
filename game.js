@@ -2556,8 +2556,31 @@ const ROCKET_PAD   = 30;    // gap to keep from screen edges
 // ── Touch / swipe input ───────────────────────
 const touch = { active: false, startX: 0, currentX: 0, startY: 0, currentY: 0, didScroll: false };
 
+// On-screen arrow buttons (held during gameplay)
+const arrowTouch = { left: false, right: false };
+const ARROW_L = { x: 55,          y: CANVAS_H - 60, w: 100, h: 80 };
+const ARROW_R = { x: CANVAS_W-55, y: CANVAS_H - 60, w: 100, h: 80 };
+
+function inArrowBtn(btn, cx, cy) {
+  return Math.abs(cx - btn.x) < btn.w / 2 && Math.abs(cy - btn.y) < btn.h / 2;
+}
+
+function updateArrowTouches(e) {
+  const rect  = canvas.getBoundingClientRect();
+  const scale = rect.width / CANVAS_W;
+  arrowTouch.left  = false;
+  arrowTouch.right = false;
+  for (const t of e.touches) {
+    const cx = (t.clientX - rect.left) / scale;
+    const cy = (t.clientY - rect.top)  / scale;
+    if (inArrowBtn(ARROW_L, cx, cy)) arrowTouch.left  = true;
+    if (inArrowBtn(ARROW_R, cx, cy)) arrowTouch.right = true;
+  }
+}
+
 canvas.addEventListener('touchstart', e => {
   e.preventDefault();
+  updateArrowTouches(e);
   touch.active    = true;
   touch.didScroll = false;
   touch.startX    = e.touches[0].clientX;
@@ -2568,6 +2591,7 @@ canvas.addEventListener('touchstart', e => {
 
 canvas.addEventListener('touchmove', e => {
   e.preventDefault();
+  updateArrowTouches(e);
   touch.currentX = e.touches[0].clientX;
   const newY = e.touches[0].clientY;
   if (state.screen === 'shop') {
@@ -2581,12 +2605,15 @@ canvas.addEventListener('touchmove', e => {
 
 canvas.addEventListener('touchend', e => {
   e.preventDefault();
-  touch.active = false;
+  updateArrowTouches(e);
+  if (e.touches.length === 0) touch.active = false;
   if (touch.didScroll) { touch.didScroll = false; return; }
+  // Only fire handleTap if the lift wasn't on an arrow button
   const rect  = canvas.getBoundingClientRect();
   const scale = rect.width / CANVAS_W;
   const tx = (e.changedTouches[0].clientX - rect.left) / scale;
   const ty = (e.changedTouches[0].clientY - rect.top)  / scale;
+  if (state.screen === 'playing' && (inArrowBtn(ARROW_L, tx, ty) || inArrowBtn(ARROW_R, tx, ty))) return;
   handleTap(tx, ty);
 }, { passive: false });
 
@@ -3162,23 +3189,15 @@ function update(delta) {
   const accel     = ROCKET_ACCEL * zoneMult * boostMult;
   const maxSpeed  = ROCKET_MAX   * zoneMult * boostMult;
 
-  // Apply left/right acceleration from held keys
-  if (keys['ArrowLeft'])  rocket.vx -= accel * delta;
-  if (keys['ArrowRight']) rocket.vx += accel * delta;
-
-  // Apply velocity from touch swipe
-  if (touch.active) {
-    const cssScale  = canvas.getBoundingClientRect().width / CANVAS_W;
-    const swipeDx   = (touch.currentX - touch.startX) / cssScale;
-    const pushRatio = Math.max(-1, Math.min(1, swipeDx / 150));
-    rocket.vx += pushRatio * accel * delta;
-  }
+  // Apply left/right acceleration from held keys or on-screen arrow buttons
+  if (keys['ArrowLeft']  || arrowTouch.left)  rocket.vx -= accel * delta;
+  if (keys['ArrowRight'] || arrowTouch.right) rocket.vx += accel * delta;
 
   // Clamp to max speed
   rocket.vx = Math.max(-maxSpeed, Math.min(maxSpeed, rocket.vx));
 
   // Decay velocity when no input is active
-  const anyInput = keys['ArrowLeft'] || keys['ArrowRight'] || touch.active;
+  const anyInput = keys['ArrowLeft'] || keys['ArrowRight'] || arrowTouch.left || arrowTouch.right;
   if (!anyInput) rocket.vx *= Math.pow(ROCKET_DECAY, delta);
 
   // Tick hit invincibility timer
@@ -3641,6 +3660,7 @@ function draw() {
 
   // ── HUD (always on top) ───────────────────────
   drawHUD();
+  drawArrowButtons();
 
   // ── Altitude progress bar (right edge) ────────
   drawAltitudeBar();
@@ -6021,6 +6041,37 @@ function drawLevelBanner() {
 }
 
 // ── HUD bar ───────────────────────────────────
+
+function drawArrowButtons() {
+  const btns = [
+    { btn: ARROW_L, label: '◀', pressed: arrowTouch.left  },
+    { btn: ARROW_R, label: '▶', pressed: arrowTouch.right },
+  ];
+  for (const { btn, label, pressed } of btns) {
+    const alpha = pressed ? 0.75 : 0.35;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    // Background circle
+    ctx.beginPath();
+    ctx.arc(btn.x, btn.y, 36, 0, Math.PI * 2);
+    ctx.fillStyle = pressed ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,40,0.55)';
+    ctx.fill();
+    ctx.strokeStyle = pressed ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Arrow label
+    ctx.fillStyle    = '#ffffff';
+    ctx.font         = 'bold 26px monospace';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, btn.x, btn.y + 1);
+
+    ctx.restore();
+  }
+  ctx.textBaseline = 'alphabetic';
+}
 
 function drawExitBtn() {
   const { x, y, w, h } = EXIT_BTN;
