@@ -15,10 +15,9 @@ html, body {
 }
 
 #gameCanvas {
-  /* Canvas is locked to a mobile-style aspect ratio (390x844).
-     CSS scales it up/down to fit the screen while keeping proportions. */
-  width: min(100vw, calc(100vh * 390 / 844));
-  height: min(100vh, calc(100vw * 844 / 390));
+  /* Use svh (small viewport height) so Safari's address bar doesn't cut off the game */
+  width: min(100vw, calc(100svh * 390 / 844));
+  height: min(100svh, calc(100vw * 844 / 390));
   display: block;
   image-rendering: pixelated;
 }
