@@ -2913,6 +2913,7 @@ function handleTap(x, y) {
       state.secretFlash = { life: 3.5, msg: '🌆  RETROWAVE UNLOCKED  🌆', sub: 'Secret theme equipped!' };
     }
     state.screen = 'start';
+    return;
   }
   if (state.screen === 'settings' && Math.abs(x - CANVAS_W/2) < 100 && Math.abs(y - 478) < 22) {
     saveAuthSession(null);
@@ -2932,8 +2933,9 @@ function handleTap(x, y) {
     state.trophyTaps++; state.trophyLastTap = tNow;
     if (state.trophyTaps >= 3) { state.trophyTaps = 0; state.ghostTimeVisible = true; }
     state.screen = 'start';
+    return;
   }
-  if (state.screen === 'tutorial'    && hitButton(TUTORIAL_BACK,    x, y)) { countBackEgg(); state.screen = 'start'; }
+  if (state.screen === 'tutorial'    && hitButton(TUTORIAL_BACK,    x, y)) { countBackEgg(); state.screen = 'start'; return; }
   if (state.screen === 'settings' && hitButton(SOUND_TOGGLE,  x, y)) {
     settings.soundEnabled = !settings.soundEnabled;
     saveSettings();
