@@ -2728,10 +2728,11 @@ function handleTap(x, y) {
     }
     return;
   }
-  // ⚙️ Gear egg — must check BEFORE nav so tapping gear counts instead of navigating
-  if (state.screen === 'start' && hitButton(SETTINGS_BTN, x, y)) {
+  if (state.screen === 'start'       && hitButton(LAUNCH_BTN,       x, y)) beginLaunch();
+  if (state.screen === 'start'       && hitButton(SETTINGS_BTN,     x, y)) {
+    // ⚙️ Count settings opens — 5 rapid opens → RETROWAVE (screen still opens normally)
     const now = Date.now();
-    if (now - state.gearLastTap > 2500) state.gearTaps = 0;
+    if (now - state.gearLastTap > 8000) state.gearTaps = 0;
     state.gearTaps++; state.gearLastTap = now;
     if (state.gearTaps >= 5) {
       state.gearTaps = 0;
@@ -2743,24 +2744,19 @@ function handleTap(x, y) {
       saveEquippedBg('retrowave');
       state.secretFlash = { life: 3.5, msg: '🌆  RETROWAVE UNLOCKED  🌆', sub: 'Secret theme equipped!' };
     }
-    return; // suppress navigation on every tap while counting
+    state.screen = 'settings';
   }
-
-  // 🏆 Trophy egg — must check BEFORE nav
-  if (state.screen === 'start' && hitButton(LEADERBOARD_BTN, x, y)) {
+  if (state.screen === 'start'       && hitButton(LEADERBOARD_BTN,  x, y)) {
+    // 🏆 Count leaderboard opens — 3 rapid opens → ghost time popup (screen still opens normally)
     const now = Date.now();
-    if (now - state.trophyLastTap > 2500) state.trophyTaps = 0;
+    if (now - state.trophyLastTap > 8000) state.trophyTaps = 0;
     state.trophyTaps++; state.trophyLastTap = now;
     if (state.trophyTaps >= 3) {
       state.trophyTaps = 0;
       state.ghostTimeVisible = true;
     }
-    return; // suppress navigation on every tap while counting
+    state.screen = 'leaderboard'; fetchGlobalLeaderboard();
   }
-
-  if (state.screen === 'start'       && hitButton(LAUNCH_BTN,       x, y)) beginLaunch();
-  if (state.screen === 'start'       && hitButton(SETTINGS_BTN,     x, y)) state.screen = 'settings';
-  if (state.screen === 'start'       && hitButton(LEADERBOARD_BTN,  x, y)) { state.screen = 'leaderboard'; fetchGlobalLeaderboard(); }
   if (state.screen === 'start'       && hitButton(SHOP_BTN,          x, y)) {
     if (state.authUser?.isGuest) { state.signinPrompt = true; return; }
     state.screen = 'shop';
