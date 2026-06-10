@@ -2729,34 +2729,8 @@ function handleTap(x, y) {
     return;
   }
   if (state.screen === 'start'       && hitButton(LAUNCH_BTN,       x, y)) beginLaunch();
-  if (state.screen === 'start'       && hitButton(SETTINGS_BTN,     x, y)) {
-    // ⚙️ Count settings opens — 5 rapid opens → RETROWAVE (screen still opens normally)
-    const now = Date.now();
-    if (now - state.gearLastTap > 8000) state.gearTaps = 0;
-    state.gearTaps++; state.gearLastTap = now;
-    if (state.gearTaps >= 5) {
-      state.gearTaps = 0;
-      if (!state.unlockedBgs.includes('retrowave')) {
-        state.unlockedBgs = [...state.unlockedBgs, 'retrowave'];
-        saveUnlockedBgs(state.unlockedBgs);
-      }
-      state.equippedBg = 'retrowave';
-      saveEquippedBg('retrowave');
-      state.secretFlash = { life: 3.5, msg: '🌆  RETROWAVE UNLOCKED  🌆', sub: 'Secret theme equipped!' };
-    }
-    state.screen = 'settings';
-  }
-  if (state.screen === 'start'       && hitButton(LEADERBOARD_BTN,  x, y)) {
-    // 🏆 Count leaderboard opens — 3 rapid opens → ghost time popup (screen still opens normally)
-    const now = Date.now();
-    if (now - state.trophyLastTap > 8000) state.trophyTaps = 0;
-    state.trophyTaps++; state.trophyLastTap = now;
-    if (state.trophyTaps >= 3) {
-      state.trophyTaps = 0;
-      state.ghostTimeVisible = true;
-    }
-    state.screen = 'leaderboard'; fetchGlobalLeaderboard();
-  }
+  if (state.screen === 'start'       && hitButton(SETTINGS_BTN,     x, y)) state.screen = 'settings';
+  if (state.screen === 'start'       && hitButton(LEADERBOARD_BTN,  x, y)) { state.screen = 'leaderboard'; fetchGlobalLeaderboard(); }
   if (state.screen === 'start'       && hitButton(SHOP_BTN,          x, y)) {
     if (state.authUser?.isGuest) { state.signinPrompt = true; return; }
     state.screen = 'shop';
@@ -2926,7 +2900,20 @@ function handleTap(x, y) {
       }
     }
   }
-  if (state.screen === 'settings'    && hitButton(SETTINGS_BACK,    x, y)) { countBackEgg(); state.screen = 'start'; }
+  if (state.screen === 'settings'    && hitButton(SETTINGS_BACK,    x, y)) {
+    countBackEgg();
+    // ⚙️ Gear egg: back from settings 5 rapid times → RETROWAVE
+    const gNow = Date.now();
+    if (gNow - state.gearLastTap > 6000) state.gearTaps = 0;
+    state.gearTaps++; state.gearLastTap = gNow;
+    if (state.gearTaps >= 5) {
+      state.gearTaps = 0;
+      if (!state.unlockedBgs.includes('retrowave')) { state.unlockedBgs = [...state.unlockedBgs, 'retrowave']; saveUnlockedBgs(state.unlockedBgs); }
+      state.equippedBg = 'retrowave'; saveEquippedBg('retrowave');
+      state.secretFlash = { life: 3.5, msg: '🌆  RETROWAVE UNLOCKED  🌆', sub: 'Secret theme equipped!' };
+    }
+    state.screen = 'start';
+  }
   if (state.screen === 'settings' && Math.abs(x - CANVAS_W/2) < 100 && Math.abs(y - 478) < 22) {
     saveAuthSession(null);
     state.authUser = null;
@@ -2937,7 +2924,15 @@ function handleTap(x, y) {
     state.screen = 'auth';
     return;
   }
-  if (state.screen === 'leaderboard' && hitButton(LEADERBOARD_BACK, x, y)) { countBackEgg(); state.screen = 'start'; }
+  if (state.screen === 'leaderboard' && hitButton(LEADERBOARD_BACK, x, y)) {
+    countBackEgg();
+    // 🏆 Trophy egg: back from leaderboard 3 rapid times → ghost time popup
+    const tNow = Date.now();
+    if (tNow - state.trophyLastTap > 6000) state.trophyTaps = 0;
+    state.trophyTaps++; state.trophyLastTap = tNow;
+    if (state.trophyTaps >= 3) { state.trophyTaps = 0; state.ghostTimeVisible = true; }
+    state.screen = 'start';
+  }
   if (state.screen === 'tutorial'    && hitButton(TUTORIAL_BACK,    x, y)) { countBackEgg(); state.screen = 'start'; }
   if (state.screen === 'settings' && hitButton(SOUND_TOGGLE,  x, y)) {
     settings.soundEnabled = !settings.soundEnabled;
