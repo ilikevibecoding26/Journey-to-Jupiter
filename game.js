@@ -2399,6 +2399,13 @@ const state = {
   eggTaps: 0,                    // secret cloud easter egg tap counter
   eggLastTap: 0,                 // timestamp of last egg tap
   eggFlash: 0,                   // seconds remaining on "SECRET UNLOCKED" flash
+  // Sun egg — 5 taps → +500 coins
+  sunTaps: 0, sunLastTap: 0,
+  // Title egg — 4 taps on "JUPITER" → speed boost on next run
+  titleTaps: 0, titleLastTap: 0, titleBoostArmed: false,
+  // Coin badge egg — 10 taps → double coins
+  coinTaps: 0, coinLastTap: 0,
+  secretFlash: { life: 0, msg: '', sub: '' },  // shared flash banner for new secrets
   newAchievements: [],           // achievements unlocked since last start screen visit
   dailyChallengeJustCompleted: false,
   runStarCount:       0,         // stars collected this run
@@ -2747,6 +2754,42 @@ function handleTap(x, y) {
       state.eggFlash = 3.0; // show flash for 3 seconds
     }
   }
+  // ☀️ Sun egg — tap sun (310,115) 5 times for +500 coins
+  if (state.screen === 'start' && Math.hypot(x - 310, y - 115) < 60) {
+    const now = Date.now();
+    if (now - state.sunLastTap > 2000) state.sunTaps = 0;
+    state.sunTaps++; state.sunLastTap = now;
+    if (state.sunTaps >= 5) {
+      state.sunTaps = 0;
+      state.coins += 500; saveCoins(state.coins);
+      state.secretFlash = { life: 3.0, msg: '☀️  SOLAR BONUS  ☀️', sub: '+500 coins added!' };
+    }
+  }
+
+  // 🚀 Title egg — tap "JUPITER" text area (centre, y≈144) 4 times → speed boost armed for next run
+  if (state.screen === 'start' && Math.abs(x - CANVAS_W/2) < 140 && Math.abs(y - 144) < 36) {
+    const now = Date.now();
+    if (now - state.titleLastTap > 2000) state.titleTaps = 0;
+    state.titleTaps++; state.titleLastTap = now;
+    if (state.titleTaps >= 4) {
+      state.titleTaps = 0;
+      state.titleBoostArmed = true;
+      state.secretFlash = { life: 3.0, msg: '⚡  HYPERDRIVE ARMED  ⚡', sub: 'Speed boost ready for your next run!' };
+    }
+  }
+
+  // 🪙 Coin badge egg — tap coin balance (top-left, ~x=55,y=36) 10 times → double coins
+  if (state.screen === 'start' && x < 115 && y < 62) {
+    const now = Date.now();
+    if (now - state.coinLastTap > 2000) state.coinTaps = 0;
+    state.coinTaps++; state.coinLastTap = now;
+    if (state.coinTaps >= 10) {
+      state.coinTaps = 0;
+      state.coins = Math.min(state.coins * 2, 99999); saveCoins(state.coins);
+      state.secretFlash = { life: 3.0, msg: '🪙  COIN DOUBLED  🪙', sub: `Balance is now ${state.coins}!` };
+    }
+  }
+
   // Dismiss sign-in prompt on any tap
   if (state.signinPrompt) {
     state.signinPrompt = false;
@@ -2928,8 +2971,10 @@ function startGame() {
   state.pendingTime    = 0;
   state.shield         = false;
   state.magnetTimer    = 0;
-  state.boostTimer     = 0;
-  state.boostFlash     = 0;
+  // Apply hyperdrive if armed by title easter egg
+  state.boostTimer     = state.titleBoostArmed ? 10.0 : 0;
+  state.boostFlash     = state.titleBoostArmed ? 0.8  : 0;
+  state.titleBoostArmed = false;
   state.shakeTimer     = 0;
   state.hitFlash       = 0;
   state.backgroundZone = 1;
@@ -3166,6 +3211,7 @@ function update(delta) {
   // Tick daily bonus popup countdown on start screen
   if (state.dailyBonus && state.dailyBonus.life > 0) state.dailyBonus.life -= delta;
   if (state.eggFlash > 0) state.eggFlash -= delta;
+  if (state.secretFlash.life > 0) state.secretFlash.life -= delta;
   // Tick achievement popup
   if (state.achPopupLife > 0) { state.achPopupLife -= delta; if (state.achPopupLife <= 0) { state.newAchievements.shift(); state.achPopupLife = 0; } }
 
@@ -3514,6 +3560,7 @@ function draw() {
     drawStartScreen();
     if (state.signinPrompt) drawSignInPrompt();
     if (state.eggFlash > 0) drawEggFlash();
+    if (state.secretFlash.life > 0) drawSecretFlash();
     return;
   }
 
@@ -4655,6 +4702,26 @@ function drawEggFlash() {
   ctx.font      = '11px monospace';
   ctx.fillText('Everything in the shop is yours!', CANVAS_W / 2, by + bh / 2 + 12);
 
+  ctx.restore();
+  ctx.textBaseline = 'alphabetic';
+}
+
+// ── Generic secret flash banner ───────────────
+function drawSecretFlash() {
+  const { life, msg, sub } = state.secretFlash;
+  const alpha = Math.min(1, life, (3 - life + 0.3) * 5);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  const bw = 300, bh = 56, bx = CANVAS_W / 2 - bw / 2, by = CANVAS_H / 2 - bh / 2;
+  ctx.fillStyle = 'rgba(10, 5, 0, 0.94)';
+  ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 14); ctx.fill();
+  ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 14); ctx.stroke();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 14px monospace';
+  ctx.fillText(msg, CANVAS_W / 2, by + bh / 2 - 9);
+  ctx.fillStyle = 'rgba(255,220,100,0.8)'; ctx.font = '11px monospace';
+  ctx.fillText(sub, CANVAS_W / 2, by + bh / 2 + 12);
   ctx.restore();
   ctx.textBaseline = 'alphabetic';
 }
