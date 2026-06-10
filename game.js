@@ -2413,7 +2413,9 @@ const state = {
   trophyTaps: 0, trophyLastTap: 0, ghostTimeVisible: false,
   // Gear egg — 5 taps → unlock RETROWAVE theme
   gearTaps: 0, gearLastTap: 0,
-  // Back-button egg — 5 rapid back taps → unlock MATRIX theme
+  // Wheel-center egg — tap center 7× → unlock MATRIX theme
+  wheelCenterTaps: 0, wheelCenterLastTap: 0,
+  // Back-button tracking (kept for settings/leaderboard eggs)
   backTaps: 0, backLastTap: 0,
   // Rage mode — 3 consecutive hits → rocket turns red, meteors explode
   rageMode: false, rageTimer: 0, consecutiveHits: 0,
@@ -2811,6 +2813,20 @@ function handleTap(x, y) {
     return;
   }
   if (state.screen === 'wheel') {
+    // 💻 Matrix egg — tap center of wheel 7×
+    const WX = CANVAS_W / 2, WY = 320;
+    if (Math.hypot(x - WX, y - WY) < 36) {
+      const now = Date.now();
+      if (now - state.wheelCenterLastTap > 2500) state.wheelCenterTaps = 0;
+      state.wheelCenterTaps++; state.wheelCenterLastTap = now;
+      if (state.wheelCenterTaps >= 7) {
+        state.wheelCenterTaps = 0;
+        if (!state.unlockedBgs.includes('matrix')) { state.unlockedBgs = [...state.unlockedBgs, 'matrix']; saveUnlockedBgs(state.unlockedBgs); }
+        state.equippedBg = 'matrix'; saveEquippedBg('matrix');
+        state.secretFlash = { life: 3.5, msg: '💻  MATRIX UNLOCKED  💻', sub: 'Secret theme equipped!' };
+      }
+      return;
+    }
     // Tap SPIN button area
     if(!state.wheelSpinning && !state.wheelShowResult && y>CANVAS_H-134 && y<CANVAS_H-86) startWheelSpin();
     // Dismiss result
@@ -2827,7 +2843,7 @@ function handleTap(x, y) {
   if (state.screen === 'shop') {
     for (const btn of shopButtons) {
       if (Math.abs(x - btn.x) < btn.w / 2 && Math.abs(y - btn.y) < btn.h / 2) {
-        if (btn.action === 'back')  { countBackEgg(); state.screen = 'start'; break; }
+        if (btn.action === 'back')  { state.screen = 'start'; break; }
         if (btn.action === 'tab') { state.shopTab = btn.id; state.shopScrollY = 0; break; }
         if (btn.action === 'equip') {
           state.equippedRocket = btn.id;
@@ -2901,7 +2917,6 @@ function handleTap(x, y) {
     }
   }
   if (state.screen === 'settings'    && hitButton(SETTINGS_BACK,    x, y)) {
-    countBackEgg();
     // ⚙️ Gear egg: back from settings 5 rapid times → RETROWAVE
     const gNow = Date.now();
     if (gNow - state.gearLastTap > 6000) state.gearTaps = 0;
@@ -2926,7 +2941,6 @@ function handleTap(x, y) {
     return;
   }
   if (state.screen === 'leaderboard' && hitButton(LEADERBOARD_BACK, x, y)) {
-    countBackEgg();
     // 🏆 Trophy egg: back from leaderboard 3 rapid times → ghost time popup
     const tNow = Date.now();
     if (tNow - state.trophyLastTap > 6000) state.trophyTaps = 0;
@@ -2935,7 +2949,7 @@ function handleTap(x, y) {
     state.screen = 'start';
     return;
   }
-  if (state.screen === 'tutorial'    && hitButton(TUTORIAL_BACK,    x, y)) { countBackEgg(); state.screen = 'start'; return; }
+  if (state.screen === 'tutorial'    && hitButton(TUTORIAL_BACK,    x, y)) { state.screen = 'start'; return; }
   if (state.screen === 'settings' && hitButton(SOUND_TOGGLE,  x, y)) {
     settings.soundEnabled = !settings.soundEnabled;
     saveSettings();
@@ -4979,23 +4993,6 @@ function drawLeaderboardScreen() {
 
   // Back button
   drawMenuButton(LEADERBOARD_BACK, '← BACK', '#1a1a60', '#2828a0', '#8888ff');
-}
-
-// ── Back-button egg counter (called from every back→start transition) ─────────
-function countBackEgg() {
-  const now = Date.now();
-  if (now - state.backLastTap > 5000) state.backTaps = 0;
-  state.backTaps++; state.backLastTap = now;
-  if (state.backTaps >= 5) {
-    state.backTaps = 0;
-    if (!state.unlockedBgs.includes('matrix')) {
-      state.unlockedBgs = [...state.unlockedBgs, 'matrix'];
-      saveUnlockedBgs(state.unlockedBgs);
-    }
-    state.equippedBg = 'matrix';
-    saveEquippedBg('matrix');
-    state.secretFlash = { life: 3.5, msg: '💻  MATRIX UNLOCKED  💻', sub: 'Secret theme equipped!' };
-  }
 }
 
 // ── Easter egg unlock flash ────────────────────
