@@ -2731,7 +2731,7 @@ function handleTap(x, y) {
   // ⚙️ Gear egg — must check BEFORE nav so tapping gear counts instead of navigating
   if (state.screen === 'start' && hitButton(SETTINGS_BTN, x, y)) {
     const now = Date.now();
-    if (now - state.gearLastTap > 1500) state.gearTaps = 0;
+    if (now - state.gearLastTap > 2500) state.gearTaps = 0;
     state.gearTaps++; state.gearLastTap = now;
     if (state.gearTaps >= 5) {
       state.gearTaps = 0;
@@ -2749,7 +2749,7 @@ function handleTap(x, y) {
   // 🏆 Trophy egg — must check BEFORE nav
   if (state.screen === 'start' && hitButton(LEADERBOARD_BTN, x, y)) {
     const now = Date.now();
-    if (now - state.trophyLastTap > 1500) state.trophyTaps = 0;
+    if (now - state.trophyLastTap > 2500) state.trophyTaps = 0;
     state.trophyTaps++; state.trophyLastTap = now;
     if (state.trophyTaps >= 3) {
       state.trophyTaps = 0;
@@ -3348,6 +3348,14 @@ function update(delta) {
     if (state.rageTimer <= 0) { state.rageMode = false; state.rageTimer = 0; }
   }
 
+  // Reset consecutive-hit streak if 4 seconds pass without being hit
+  if (state.consecutiveHits > 0 && !state.rageMode) {
+    state.timeSinceHit = (state.timeSinceHit || 0) + delta;
+    if (state.timeSinceHit > 4) { state.consecutiveHits = 0; state.timeSinceHit = 0; }
+  } else {
+    state.timeSinceHit = 0;
+  }
+
   // Spawn meteors on a timer
   meteorTimer += delta;
   if (meteorTimer >= METEOR_SPAWN_INTERVAL) {
@@ -3403,6 +3411,21 @@ function update(delta) {
           state.meteors.splice(i, 1);
           continue;
         }
+        // 3rd consecutive hit → RAGE MODE saves you instead of dying
+        state.consecutiveHits++;
+        state.timeSinceHit = 0;
+        if (state.consecutiveHits >= 3 && !state.rageMode) {
+          state.consecutiveHits = 0;
+          state.rageMode  = true;
+          state.rageTimer = 10;
+          rocket.hitTimer  = 1.5;
+          state.shakeTimer = 0.5;
+          state.hitFlash   = 0.6;
+          sfxHit();
+          state.meteors.splice(i, 1);
+          state.secretFlash = { life: 3.5, msg: '🔥  RAGE MODE  🔥', sub: 'Meteors explode for 10 seconds!' };
+          continue; // no life lost — rage saves you
+        }
         state.lives -= 1;
         rocket.hitTimer  = 1.5;
         state.shakeTimer = 0.35;
@@ -3411,14 +3434,6 @@ function update(delta) {
         state.streakMilestones = [];
         state.zoneHits++;
         sfxHit();
-        // Count consecutive hits → trigger rage mode on 3rd
-        state.consecutiveHits++;
-        if (state.consecutiveHits >= 3) {
-          state.consecutiveHits = 0;
-          state.rageMode  = true;
-          state.rageTimer = 12; // 12 seconds of rage
-          state.secretFlash = { life: 3.0, msg: '🔥  RAGE MODE  🔥', sub: 'Meteors explode for 12 seconds!' };
-        }
         state.meteors.splice(i, 1);
         if (state.lives <= 0) {
           state.leaderboard = loadLeaderboard();
@@ -4976,7 +4991,7 @@ function drawLeaderboardScreen() {
 // ── Back-button egg counter (called from every back→start transition) ─────────
 function countBackEgg() {
   const now = Date.now();
-  if (now - state.backLastTap > 1200) state.backTaps = 0;
+  if (now - state.backLastTap > 5000) state.backTaps = 0;
   state.backTaps++; state.backLastTap = now;
   if (state.backTaps >= 5) {
     state.backTaps = 0;
