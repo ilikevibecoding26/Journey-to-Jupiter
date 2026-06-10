@@ -4471,7 +4471,7 @@ function drawBgRetrowave() {
 }
 
 // ── MATRIX (secret back-egg background) ───────────────────────────────────────
-const MATRIX_CHARS = '01アイウエオカキクケコJUPITER01010<>{}[]|/\\';
+const MATRIX_CHARS = '01';
 function drawBgMatrix() {
   // Dark green-tinted black sky
   ctx.fillStyle = '#000a00';
