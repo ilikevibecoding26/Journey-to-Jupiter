@@ -171,6 +171,8 @@ function submitNameEntry(rawName) {
   state.coins       = total;
   // Submit to global leaderboard (best effort, non-blocking)
   submitGlobalScore(name, state.pendingTime);
+  // Save ghost run on win too
+  if (state.ghostPath.length > 5) saveGhostRun(state.ghostPath, state.elapsedTime);
   updateStatsAfterRun(true);
   updateDailyChallengeAfterRun();
   checkAchievements();
@@ -336,6 +338,17 @@ function loadCoins() {
 }
 function saveCoins(n) {
   localStorage.setItem('jtj_coins', String(Math.max(0, n)));
+}
+
+// ── Ghost run recording ────────────────────────
+function loadGhostRun() {
+  try {
+    const raw = localStorage.getItem('jtj_ghost_run');
+    return raw ? JSON.parse(raw) : null; // { path: [x,...], time: seconds }
+  } catch { return null; }
+}
+function saveGhostRun(path, time) {
+  try { localStorage.setItem('jtj_ghost_run', JSON.stringify({ path, time })); } catch {}
 }
 
 // ── Daily login + first-run bonus helpers ──────
@@ -2276,6 +2289,9 @@ function loadProfileIntoSession(idx) {
   state.unlockedPacks   = loadUnlockedPacks();
   state.equippedPack    = loadEquippedPack();
   state.lastSpinDate    = p.lastSpinDate || '';
+  // Load ghost time for popup display
+  const gr = loadGhostRun();
+  state.ghostTime = gr ? gr.time : null;
 }
 function saveCurrentProfileData() {
   const idx      = getActiveProfileIdx();
@@ -2413,6 +2429,15 @@ const state = {
   trophyTaps: 0, trophyLastTap: 0, ghostTimeVisible: false,
   // Gear egg — 5 taps → unlock RETROWAVE theme
   gearTaps: 0, gearLastTap: 0,
+  // Ghost run
+  ghostMode: false,        // trophy egg activated — ghost appears next run
+  ghostActive: false,      // ghost is currently racing this run
+  ghostPlayback: [],       // recorded x positions being replayed
+  ghostPlaybackTimer: 0,   // how far through the playback we are
+  ghostPath: [],           // recording positions this run
+  ghostSampleTimer: 0,     // timer for sampling
+  ghostBeaten: false,      // player beat the ghost this run
+  ghostTime: null,         // seconds of the saved ghost run (shown in popup)
   // Wheel-center egg — tap center 7× → unlock MATRIX theme
   wheelCenterTaps: 0, wheelCenterLastTap: 0,
   // Back-button tracking (kept for settings/leaderboard eggs)
@@ -2945,7 +2970,13 @@ function handleTap(x, y) {
     const tNow = Date.now();
     if (tNow - state.trophyLastTap > 6000) state.trophyTaps = 0;
     state.trophyTaps++; state.trophyLastTap = tNow;
-    if (state.trophyTaps >= 3) { state.trophyTaps = 0; state.ghostTimeVisible = true; }
+    if (state.trophyTaps >= 3) {
+      state.trophyTaps = 0;
+      state.ghostMode = true;
+      const gr = loadGhostRun();
+      state.ghostTime = gr ? gr.time : null;
+      state.ghostTimeVisible = true;
+    }
     state.screen = 'start';
     return;
   }
@@ -3034,6 +3065,20 @@ function startGame() {
   state.rageMode       = false;
   state.rageTimer      = 0;
   state.consecutiveHits = 0;
+  // Ghost run — always start fresh recording; activate playback if ghost mode on
+  state.ghostPath         = [];
+  state.ghostSampleTimer  = 0;
+  state.ghostPlaybackTimer = 0;
+  state.ghostBeaten       = false;
+  const savedGhost = loadGhostRun();
+  if (state.ghostMode && savedGhost && savedGhost.path.length > 5) {
+    state.ghostActive   = true;
+    state.ghostPlayback = savedGhost.path;
+    state.ghostTime     = savedGhost.time;
+  } else {
+    state.ghostActive   = false;
+    state.ghostPlayback = [];
+  }
   state.zoneAnnounce   = { text: '', life: 0 };
   state.levelAnnounce  = { life: 0 };
   meteorTimer      = 0;
@@ -3443,6 +3488,8 @@ function update(delta) {
         sfxHit();
         state.meteors.splice(i, 1);
         if (state.lives <= 0) {
+          // Save ghost run (always overwrite so ghost is always fresh)
+          if (state.ghostPath.length > 5) saveGhostRun(state.ghostPath, state.elapsedTime);
           state.leaderboard = loadLeaderboard();
           updateStatsAfterRun(false);
           updateDailyChallengeAfterRun();
@@ -3514,6 +3561,29 @@ function update(delta) {
 
   // Tick rage-mode explosion particles
   tickExplosions(delta);
+
+  // Record rocket path for ghost (one sample every 0.15s)
+  state.ghostSampleTimer += delta;
+  if (state.ghostSampleTimer >= 0.15) {
+    state.ghostSampleTimer -= 0.15;
+    if (state.ghostPath.length < 2400) // cap ~6 min
+      state.ghostPath.push(Math.round(state.rocket.x));
+  }
+
+  // Tick ghost playback timer
+  if (state.ghostActive) {
+    state.ghostPlaybackTimer += delta;
+    // Check if player has beaten the ghost (further along in time)
+    if (!state.ghostBeaten && state.ghostPlayback.length > 0) {
+      const ghostIdx = Math.floor(state.ghostPlaybackTimer / 0.15);
+      if (ghostIdx >= state.ghostPlayback.length) {
+        // Ghost ran out — player outlasted the ghost!
+        state.ghostBeaten = true;
+        state.coins += 50; saveCoins(state.coins);
+        state.secretFlash = { life: 3.5, msg: '👻  GHOST BEATEN!  👻', sub: '+50 coins — new shadow recorded!' };
+      }
+    }
+  }
 
   // Magnet: pull collectible stars toward rocket
   if (state.magnetTimer > 0) {
@@ -3820,6 +3890,12 @@ function draw() {
   if (state.shield)          drawShieldBubble(state.rocket.x, state.rocket.y);
   if (state.coinMultiplier > 1) drawCoinMultHUD();
   if (state.firstRunBonus)     drawFirstRunHUD();
+
+  // ── Ghost rocket (shadow pilot) ───────────────
+  if (state.ghostActive && !state.ghostBeaten && state.ghostPlayback.length > 0) {
+    const gIdx = Math.min(Math.floor(state.ghostPlaybackTimer / 0.15), state.ghostPlayback.length - 1);
+    drawGhostRocket(state.ghostPlayback[gIdx]);
+  }
 
   // ── Rocket (blinks when invincible) ──────────
   const showRocket = state.rocket.hitTimer <= 0 ||
@@ -5111,27 +5187,37 @@ function drawGhostTimePopup() {
 
   // Ghost emoji
   ctx.font = '36px monospace';
-  ctx.fillText('👻', CANVAS_W / 2, py + 52);
+  ctx.fillText('👻', CANVAS_W / 2, py + 48);
 
   // "SHADOW PILOT" label
   ctx.fillStyle = 'rgba(0, 220, 255, 0.9)';
   ctx.font      = 'bold 13px monospace';
-  ctx.fillText('S H A D O W   P I L O T', CANVAS_W / 2, py + 90);
+  ctx.fillText('S H A D O W   P I L O T', CANVAS_W / 2, py + 86);
 
-  // Time display
+  // Time display — show real saved time or "no data yet"
   ctx.fillStyle = '#ffffff';
-  ctx.font      = 'bold 38px monospace';
-  ctx.fillText('1:28.4', CANVAS_W / 2, py + 132);
-
-  // Challenge line
-  ctx.fillStyle = 'rgba(180, 230, 255, 0.75)';
-  ctx.font      = '12px monospace';
-  ctx.fillText('Can you beat this ghost time?', CANVAS_W / 2, py + 166);
+  if (state.ghostTime != null) {
+    const m = Math.floor(state.ghostTime / 60);
+    const s = (state.ghostTime % 60).toFixed(1).padStart(4, '0');
+    ctx.font = 'bold 38px monospace';
+    ctx.fillText(`${m}:${s}`, CANVAS_W / 2, py + 126);
+    ctx.fillStyle = 'rgba(180, 230, 255, 0.75)';
+    ctx.font      = '12px monospace';
+    ctx.fillText('A ghost will shadow your next run.', CANVAS_W / 2, py + 158);
+    ctx.fillText('Outlast it for +50 coins!', CANVAS_W / 2, py + 174);
+  } else {
+    ctx.font = 'bold 16px monospace';
+    ctx.fillText('No ghost recorded yet.', CANVAS_W / 2, py + 120);
+    ctx.fillStyle = 'rgba(180, 230, 255, 0.75)';
+    ctx.font      = '12px monospace';
+    ctx.fillText('Play a run first — your ghost', CANVAS_W / 2, py + 150);
+    ctx.fillText('will be recorded automatically.', CANVAS_W / 2, py + 166);
+  }
 
   // Dismiss hint
   ctx.fillStyle = 'rgba(100, 140, 180, 0.55)';
   ctx.font      = '11px monospace';
-  ctx.fillText('tap anywhere to dismiss', CANVAS_W / 2, py + 192);
+  ctx.fillText('tap anywhere to dismiss', CANVAS_W / 2, py + 196);
 
   ctx.textBaseline = 'alphabetic';
 }
@@ -6770,6 +6856,28 @@ function drawRocketNova(x, y) {
   ctx.beginPath(); ctx.moveTo(-bw*0.32,bb); ctx.lineTo(bw*0.32,bb); ctx.lineTo(bw*0.4,bb+11); ctx.lineTo(-bw*0.4,bb+11); ctx.closePath();
   ctx.fillStyle='#303050'; ctx.fill();
   drawActiveTail(bb, bw, 11);
+  ctx.restore();
+}
+
+// ── Ghost (shadow) rocket ──────────────────────
+function drawGhostRocket(x) {
+  const y = CANVAS_H * 0.75;
+  ctx.save();
+  ctx.globalAlpha = 0.38;
+  drawRocket(x, y);
+  // Cyan tint overlay
+  ctx.globalCompositeOperation = 'source-atop';
+  ctx.fillStyle = 'rgba(60, 200, 255, 0.55)';
+  ctx.beginPath(); ctx.arc(x, y, 55, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  // "SHADOW" label
+  ctx.save();
+  ctx.globalAlpha = 0.55;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.font         = 'bold 10px monospace';
+  ctx.fillStyle    = '#44ddff';
+  ctx.fillText('SHADOW', x, y - 32);
   ctx.restore();
 }
 
