@@ -1967,6 +1967,9 @@ const BACKGROUNDS=[
   {id:'royale_bg',   name:'ROYALE',    cost:0, packId:'royale',   drawFn:drawPackBgRoyale   },
   {id:'neoncity_bg', name:'NEON CITY', cost:0, packId:'neoncity', drawFn:drawPackBgNeonCity },
   {id:'candy_bg',    name:'CANDY',     cost:0, packId:'candy',    drawFn:drawPackBgCandy    },
+  // Secret easter-egg backgrounds (cost 0, hidden from shop)
+  {id:'retrowave',   name:'RETROWAVE', cost:0, secret:true,       drawFn:drawBgRetrowave    },
+  {id:'matrix',      name:'MATRIX',    cost:0, secret:true,       drawFn:drawBgMatrix       },
 ];
 
 // ── Tail draw functions ─────────────────────────────────────────────────────
@@ -2374,6 +2377,7 @@ const state = {
   meteors: [],
   stars: [],
   powerups: [],
+  explosions: [],
   shield: false,                 // true while shield orb is active
   magnetTimer: 0,               // seconds remaining on magnet effect
   boostTimer: 0,                // seconds remaining on speed boost
@@ -2405,6 +2409,14 @@ const state = {
   titleTaps: 0, titleLastTap: 0, titleBoostArmed: false,
   // Coin badge egg — 10 taps → double coins
   coinTaps: 0, coinLastTap: 0,
+  // Trophy egg — 3 taps → ghost time popup
+  trophyTaps: 0, trophyLastTap: 0, ghostTimeVisible: false,
+  // Gear egg — 5 taps → unlock RETROWAVE theme
+  gearTaps: 0, gearLastTap: 0,
+  // Back-button egg — 5 rapid back taps → unlock MATRIX theme
+  backTaps: 0, backLastTap: 0,
+  // Rage mode — 3 consecutive hits → rocket turns red, meteors explode
+  rageMode: false, rageTimer: 0, consecutiveHits: 0,
   secretFlash: { life: 0, msg: '', sub: '' },  // shared flash banner for new secrets
   newAchievements: [],           // achievements unlocked since last start screen visit
   dailyChallengeJustCompleted: false,
@@ -2716,6 +2728,36 @@ function handleTap(x, y) {
     }
     return;
   }
+  // ⚙️ Gear egg — must check BEFORE nav so tapping gear counts instead of navigating
+  if (state.screen === 'start' && hitButton(SETTINGS_BTN, x, y)) {
+    const now = Date.now();
+    if (now - state.gearLastTap > 1500) state.gearTaps = 0;
+    state.gearTaps++; state.gearLastTap = now;
+    if (state.gearTaps >= 5) {
+      state.gearTaps = 0;
+      if (!state.unlockedBgs.includes('retrowave')) {
+        state.unlockedBgs = [...state.unlockedBgs, 'retrowave'];
+        saveUnlockedBgs(state.unlockedBgs);
+      }
+      state.equippedBg = 'retrowave';
+      saveEquippedBg('retrowave');
+      state.secretFlash = { life: 3.5, msg: '🌆  RETROWAVE UNLOCKED  🌆', sub: 'Secret theme equipped!' };
+    }
+    return; // suppress navigation on every tap while counting
+  }
+
+  // 🏆 Trophy egg — must check BEFORE nav
+  if (state.screen === 'start' && hitButton(LEADERBOARD_BTN, x, y)) {
+    const now = Date.now();
+    if (now - state.trophyLastTap > 1500) state.trophyTaps = 0;
+    state.trophyTaps++; state.trophyLastTap = now;
+    if (state.trophyTaps >= 3) {
+      state.trophyTaps = 0;
+      state.ghostTimeVisible = true;
+    }
+    return; // suppress navigation on every tap while counting
+  }
+
   if (state.screen === 'start'       && hitButton(LAUNCH_BTN,       x, y)) beginLaunch();
   if (state.screen === 'start'       && hitButton(SETTINGS_BTN,     x, y)) state.screen = 'settings';
   if (state.screen === 'start'       && hitButton(LEADERBOARD_BTN,  x, y)) { state.screen = 'leaderboard'; fetchGlobalLeaderboard(); }
@@ -2790,6 +2832,9 @@ function handleTap(x, y) {
     }
   }
 
+  // Dismiss ghost time popup on any tap
+  if (state.ghostTimeVisible) { state.ghostTimeVisible = false; return; }
+
   // Dismiss sign-in prompt on any tap
   if (state.signinPrompt) {
     state.signinPrompt = false;
@@ -2812,7 +2857,7 @@ function handleTap(x, y) {
   if (state.screen === 'shop') {
     for (const btn of shopButtons) {
       if (Math.abs(x - btn.x) < btn.w / 2 && Math.abs(y - btn.y) < btn.h / 2) {
-        if (btn.action === 'back')  { state.screen = 'start'; break; }
+        if (btn.action === 'back')  { countBackEgg(); state.screen = 'start'; break; }
         if (btn.action === 'tab') { state.shopTab = btn.id; state.shopScrollY = 0; break; }
         if (btn.action === 'equip') {
           state.equippedRocket = btn.id;
@@ -2885,7 +2930,7 @@ function handleTap(x, y) {
       }
     }
   }
-  if (state.screen === 'settings'    && hitButton(SETTINGS_BACK,    x, y)) state.screen = 'start';
+  if (state.screen === 'settings'    && hitButton(SETTINGS_BACK,    x, y)) { countBackEgg(); state.screen = 'start'; }
   if (state.screen === 'settings' && Math.abs(x - CANVAS_W/2) < 100 && Math.abs(y - 478) < 22) {
     saveAuthSession(null);
     state.authUser = null;
@@ -2896,8 +2941,8 @@ function handleTap(x, y) {
     state.screen = 'auth';
     return;
   }
-  if (state.screen === 'leaderboard' && hitButton(LEADERBOARD_BACK, x, y)) state.screen = 'start';
-  if (state.screen === 'tutorial'    && hitButton(TUTORIAL_BACK,    x, y)) state.screen = 'start';
+  if (state.screen === 'leaderboard' && hitButton(LEADERBOARD_BACK, x, y)) { countBackEgg(); state.screen = 'start'; }
+  if (state.screen === 'tutorial'    && hitButton(TUTORIAL_BACK,    x, y)) { countBackEgg(); state.screen = 'start'; }
   if (state.screen === 'settings' && hitButton(SOUND_TOGGLE,  x, y)) {
     settings.soundEnabled = !settings.soundEnabled;
     saveSettings();
@@ -2950,7 +2995,8 @@ function startGame() {
   state.lives       = 3;
   state.meteors     = [];
   state.stars       = [];
-  state.powerups          = [];
+  state.powerups    = [];
+  state.explosions  = [];
   state.scorePopups       = [];
   state.coinPickups         = [];
   state.coinMultiplier      = 1;
@@ -2978,6 +3024,9 @@ function startGame() {
   state.shakeTimer     = 0;
   state.hitFlash       = 0;
   state.backgroundZone = 1;
+  state.rageMode       = false;
+  state.rageTimer      = 0;
+  state.consecutiveHits = 0;
   state.zoneAnnounce   = { text: '', life: 0 };
   state.levelAnnounce  = { life: 0 };
   meteorTimer      = 0;
@@ -3161,6 +3210,48 @@ function spawnCoinPickup(type = 'coin') {
   });
 }
 
+// ── Rage mode explosion particles ───────────────
+function spawnExplosion(x, y, r) {
+  if (!state.explosions) state.explosions = [];
+  const count = 8 + Math.floor(r * 0.4);
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2 + Math.random() * 0.4;
+    const speed = 60 + Math.random() * 120;
+    state.explosions.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 0.6 + Math.random() * 0.4,
+      maxLife: 0.6 + Math.random() * 0.4,
+      r:  2 + Math.random() * 3,
+      hue: 20 + Math.floor(Math.random() * 40),  // orange-red
+    });
+  }
+}
+
+function tickExplosions(delta) {
+  if (!state.explosions) return;
+  for (let i = state.explosions.length - 1; i >= 0; i--) {
+    const p = state.explosions[i];
+    p.x += p.vx * delta;
+    p.y += p.vy * delta;
+    p.vy += 60 * delta; // slight gravity
+    p.life -= delta;
+    if (p.life <= 0) state.explosions.splice(i, 1);
+  }
+}
+
+function drawExplosions() {
+  if (!state.explosions || state.explosions.length === 0) return;
+  for (const p of state.explosions) {
+    const alpha = (p.life / p.maxLife);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * alpha, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${p.hue}, 100%, 65%, ${alpha})`;
+    ctx.fill();
+  }
+}
+
 // ── Collectible star config ─────────────────────
 const STAR_SPAWN_INTERVAL = 2.2;
 const STAR_SPEED   = 80;
@@ -3251,6 +3342,12 @@ function update(delta) {
   if (state.shakeTimer > 0) state.shakeTimer -= delta;
   if (state.hitFlash   > 0) state.hitFlash   = Math.max(0, state.hitFlash - delta * 2);
 
+  // Tick rage mode timer
+  if (state.rageMode) {
+    state.rageTimer -= delta;
+    if (state.rageTimer <= 0) { state.rageMode = false; state.rageTimer = 0; }
+  }
+
   // Spawn meteors on a timer
   meteorTimer += delta;
   if (meteorTimer >= METEOR_SPAWN_INTERVAL) {
@@ -3300,6 +3397,12 @@ function update(delta) {
           state.meteors.splice(i, 1);
           continue;
         }
+        // 💥 RAGE MODE: meteor explodes instead of hurting
+        if (state.rageMode) {
+          spawnExplosion(m.x, m.y, m.r);
+          state.meteors.splice(i, 1);
+          continue;
+        }
         state.lives -= 1;
         rocket.hitTimer  = 1.5;
         state.shakeTimer = 0.35;
@@ -3308,6 +3411,14 @@ function update(delta) {
         state.streakMilestones = [];
         state.zoneHits++;
         sfxHit();
+        // Count consecutive hits → trigger rage mode on 3rd
+        state.consecutiveHits++;
+        if (state.consecutiveHits >= 3) {
+          state.consecutiveHits = 0;
+          state.rageMode  = true;
+          state.rageTimer = 12; // 12 seconds of rage
+          state.secretFlash = { life: 3.0, msg: '🔥  RAGE MODE  🔥', sub: 'Meteors explode for 12 seconds!' };
+        }
         state.meteors.splice(i, 1);
         if (state.lives <= 0) {
           state.leaderboard = loadLeaderboard();
@@ -3378,6 +3489,9 @@ function update(delta) {
   // Tick boost timer and flash
   if (state.boostTimer > 0) state.boostTimer -= delta;
   if (state.boostFlash  > 0) state.boostFlash = Math.max(0, state.boostFlash - delta * 2.5);
+
+  // Tick rage-mode explosion particles
+  tickExplosions(delta);
 
   // Magnet: pull collectible stars toward rocket
   if (state.magnetTimer > 0) {
@@ -3559,6 +3673,7 @@ function draw() {
   if (state.screen === 'start') {
     drawStartScreen();
     if (state.signinPrompt) drawSignInPrompt();
+    if (state.ghostTimeVisible) drawGhostTimePopup();
     if (state.eggFlash > 0) drawEggFlash();
     if (state.secretFlash.life > 0) drawSecretFlash();
     return;
@@ -3664,6 +3779,9 @@ function draw() {
   // ── Meteors ───────────────────────────────────
   for (const m of state.meteors) drawMeteor(m);
 
+  // ── Rage-mode explosion particles ─────────────
+  drawExplosions();
+
   // ── Score popups ──────────────────────────────
   for (const p of state.scorePopups) {
     ctx.globalAlpha = p.life;
@@ -3684,7 +3802,23 @@ function draw() {
   // ── Rocket (blinks when invincible) ──────────
   const showRocket = state.rocket.hitTimer <= 0 ||
                      Math.floor(state.rocket.hitTimer / 0.15) % 2 === 0;
-  if (showRocket) drawRocket(state.rocket.x, state.rocket.y);
+  if (showRocket) {
+    if (state.rageMode) {
+      // Red composite tint over the rocket
+      ctx.save();
+      drawRocket(state.rocket.x, state.rocket.y);
+      ctx.globalCompositeOperation = 'source-atop';
+      // Pulsing red glow
+      const pulse = 0.45 + 0.25 * Math.sin(gameTime * 12);
+      ctx.fillStyle = `rgba(255, 30, 0, ${pulse})`;
+      ctx.beginPath();
+      ctx.arc(state.rocket.x, state.rocket.y, 50, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else {
+      drawRocket(state.rocket.x, state.rocket.y);
+    }
+  }
 
   // ── End screen shake transform ───────────────
   ctx.restore();
@@ -3708,6 +3842,7 @@ function draw() {
   // ── HUD (always on top) ───────────────────────
   drawHUD();
   drawArrowButtons();
+  if (state.rageMode) drawRageBar();
 
   // ── Altitude progress bar (right edge) ────────
   drawAltitudeBar();
@@ -4229,6 +4364,159 @@ function drawBgLucky(){
   }
 }
 
+// ── RETROWAVE (secret egg background) ─────────────────────────────────────────
+function drawBgRetrowave() {
+  // Deep purple sky
+  const sky = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+  sky.addColorStop(0,   '#0a0018');
+  sky.addColorStop(0.45,'#1a0040');
+  sky.addColorStop(0.55,'#2a0060');
+  sky.addColorStop(1,   '#0a0018');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  const horizon = CANVAS_H * 0.54;
+  const t = gameTime * 0.5;
+
+  // Neon sun — half circle sitting on horizon
+  const sunX = CANVAS_W / 2, sunR = 68;
+  const sunG = ctx.createLinearGradient(sunX, horizon - sunR, sunX, horizon);
+  sunG.addColorStop(0,   '#ffe040');
+  sunG.addColorStop(0.45,'#ff6090');
+  sunG.addColorStop(1,   '#cc00cc');
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(sunX, horizon, sunR, Math.PI, 0);
+  ctx.closePath();
+  ctx.fillStyle = sunG;
+  ctx.fill();
+  // Scanlines across the sun
+  ctx.save();
+  ctx.clip();
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+  ctx.lineWidth = 2;
+  for (let sy = horizon - sunR; sy < horizon; sy += 7) {
+    ctx.beginPath(); ctx.moveTo(sunX - sunR, sy); ctx.lineTo(sunX + sunR, sy); ctx.stroke();
+  }
+  ctx.restore();
+  ctx.restore();
+
+  // Glow halo around sun
+  const halo = ctx.createRadialGradient(sunX, horizon, sunR * 0.5, sunX, horizon, sunR * 2.2);
+  halo.addColorStop(0,   'rgba(255,80,160,0.22)');
+  halo.addColorStop(0.5, 'rgba(180,0,220,0.10)');
+  halo.addColorStop(1,   'rgba(0,0,0,0)');
+  ctx.fillStyle = halo;
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  // Perspective grid (floor)
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, horizon, CANVAS_W, CANVAS_H - horizon);
+  ctx.clip();
+
+  // Floor gradient
+  const floor = ctx.createLinearGradient(0, horizon, 0, CANVAS_H);
+  floor.addColorStop(0,   '#1a003a');
+  floor.addColorStop(1,   '#000010');
+  ctx.fillStyle = floor;
+  ctx.fillRect(0, horizon, CANVAS_W, CANVAS_H - horizon);
+
+  // Grid lines — horizontal (animated scroll)
+  const vp = horizon; // vanishing-point y = horizon
+  const gridScroll = (t * 0.3) % 1;
+  ctx.strokeStyle = 'rgba(200,0,255,0.55)';
+  ctx.lineWidth   = 1;
+  for (let i = 0; i <= 10; i++) {
+    const frac = ((i / 10) + gridScroll) % 1;
+    const frac2 = frac * frac; // perspective — denser near horizon
+    const y = vp + frac2 * (CANVAS_H - vp);
+    const alpha = 0.15 + frac2 * 0.55;
+    ctx.globalAlpha = alpha;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CANVAS_W, y); ctx.stroke();
+  }
+  // Grid lines — vertical (converge to vanishing point at center)
+  const numV = 10;
+  for (let i = 0; i <= numV; i++) {
+    const fx = i / numV; // 0..1
+    const bx = fx * CANVAS_W;
+    ctx.globalAlpha = 0.45;
+    ctx.beginPath();
+    ctx.moveTo(CANVAS_W / 2, vp);
+    ctx.lineTo(bx, CANVAS_H);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // Stars in the top portion
+  for (let i = 0; i < 60; i++) {
+    const sx = ((i * 0.197) % 1) * CANVAS_W;
+    const sy = ((i * 0.137) % 1) * horizon * 0.9;
+    const a  = 0.3 + 0.6 * Math.abs(Math.sin(i * 1.9 + t * 2));
+    const hue = (i * 23 + 200) % 360;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 0.9 + 0.7 * Math.abs(Math.sin(i * 3.1)), 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${hue},80%,80%,${a})`;
+    ctx.fill();
+  }
+}
+
+// ── MATRIX (secret back-egg background) ───────────────────────────────────────
+const MATRIX_CHARS = '01アイウエオカキクケコJUPITER01010<>{}[]|/\\';
+function drawBgMatrix() {
+  // Dark green-tinted black sky
+  ctx.fillStyle = '#000a00';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  const cols   = 20;                // number of character columns
+  const colW   = CANVAS_W / cols;
+  const t      = gameTime;
+
+  ctx.font         = `bold ${Math.floor(colW * 0.75)}px monospace`;
+  ctx.textAlign    = 'left';
+  ctx.textBaseline = 'top';
+
+  for (let c = 0; c < cols; c++) {
+    const cx = c * colW;
+    // Each column has its own phase offset and speed
+    const speed  = 3 + ((c * 7) % 5);           // chars per second
+    const offset = (c * 0.37) % 1;              // phase 0..1
+    const rows   = 14;
+
+    for (let r = 0; r < rows; r++) {
+      // Which character index this cell shows (changes over time)
+      const charIdx = Math.floor((t * speed + r * 1.7 + c * 3.1)) % MATRIX_CHARS.length;
+      const ch      = MATRIX_CHARS[charIdx];
+
+      // Vertical scroll position
+      const frac   = ((t * speed * 0.06 + offset + r / rows) % 1);
+      const cy     = frac * CANVAS_H;
+
+      // Leading character is bright white, trail fades green
+      const trailPos = (r / rows);
+      let alpha, color;
+      if (trailPos > 0.88) {
+        // Leading edge — bright white flash
+        alpha = 0.95;
+        color = `rgba(200,255,200,${alpha})`;
+      } else {
+        alpha = Math.max(0, 0.7 - trailPos * 0.6);
+        const g = Math.floor(100 + trailPos * 100);
+        color = `rgba(0,${g + 60},0,${alpha})`;
+      }
+      ctx.fillStyle = color;
+      ctx.fillText(ch, cx + 2, cy);
+    }
+  }
+
+  // Faint green scanline overlay
+  ctx.fillStyle = 'rgba(0, 40, 0, 0.12)';
+  for (let sy = 0; sy < CANVAS_H; sy += 4) {
+    ctx.fillRect(0, sy, CANVAS_W, 2);
+  }
+}
+
 // Register lucky cosmetics (wheel-only, cost 0, hidden from shop)
 // Add to arrays so equip system works — filtered out of shop by wheelOnly flag
 function registerLuckyCosmetics(){
@@ -4338,7 +4626,10 @@ function shopContentHeight() {
   const CARD_H=132,GAP=7,PCARD_H=148;
   if (state.shopTab==='rockets')     return Math.ceil(ROCKETS.length/2)*(CARD_H+GAP)-GAP;
   if (state.shopTab==='tails')       return Math.ceil(TAILS.length/2)*(CARD_H+GAP)-GAP;
-  if (state.shopTab==='backgrounds') return Math.ceil(BACKGROUNDS.length/2)*(CARD_H+GAP)-GAP;
+  if (state.shopTab==='backgrounds') {
+    const vis = BACKGROUNDS.filter(b => !b.wheelOnly && (!b.secret || state.unlockedBgs.includes(b.id)));
+    return Math.ceil(vis.length/2)*(CARD_H+GAP)-GAP;
+  }
   if (state.shopTab==='packs')       return PACKS.length*(PCARD_H+GAP)-GAP;
   return 0;
 }
@@ -4480,8 +4771,10 @@ function drawShopScreen() {
   } else if (state.shopTab === 'backgrounds') {
     // ── Backgrounds grid ──────────────────────────────
     const unlocked = state.unlockedBgs, equipped = state.equippedBg;
-    for (let i = 0; i < BACKGROUNDS.length; i++) {
-      const b = BACKGROUNDS[i], col = i%2, row = Math.floor(i/2);
+    // Hide wheel-only and secret items unless the player has already unlocked them
+    const shopBgList = BACKGROUNDS.filter(b => !b.wheelOnly && (!b.secret || unlocked.includes(b.id)));
+    for (let i = 0; i < shopBgList.length; i++) {
+      const b = shopBgList[i], col = i%2, row = Math.floor(i/2);
       const cx = gridLeft + col*(CARD_W+GAP) + CARD_W/2, cy = gridTop + row*(CARD_H+GAP) + CARD_H/2;
       const cardX = cx-CARD_W/2, cardY = cy-CARD_H/2;
       const isOwned = unlocked.includes(b.id), isEquipped = equipped===b.id, canAfford = state.coins>=b.cost;
@@ -4680,6 +4973,23 @@ function drawLeaderboardScreen() {
   drawMenuButton(LEADERBOARD_BACK, '← BACK', '#1a1a60', '#2828a0', '#8888ff');
 }
 
+// ── Back-button egg counter (called from every back→start transition) ─────────
+function countBackEgg() {
+  const now = Date.now();
+  if (now - state.backLastTap > 1200) state.backTaps = 0;
+  state.backTaps++; state.backLastTap = now;
+  if (state.backTaps >= 5) {
+    state.backTaps = 0;
+    if (!state.unlockedBgs.includes('matrix')) {
+      state.unlockedBgs = [...state.unlockedBgs, 'matrix'];
+      saveUnlockedBgs(state.unlockedBgs);
+    }
+    state.equippedBg = 'matrix';
+    saveEquippedBg('matrix');
+    state.secretFlash = { life: 3.5, msg: '💻  MATRIX UNLOCKED  💻', sub: 'Secret theme equipped!' };
+  }
+}
+
 // ── Easter egg unlock flash ────────────────────
 function drawEggFlash() {
   const alpha = Math.min(1, state.eggFlash, (3 - state.eggFlash + 0.3) * 5);
@@ -4763,6 +5073,60 @@ function drawSignInPrompt() {
   ctx.fillStyle = 'rgba(120, 120, 160, 0.7)';
   ctx.font      = '11px monospace';
   ctx.fillText('tap anywhere to dismiss', CANVAS_W / 2, py + 174);
+
+  ctx.textBaseline = 'alphabetic';
+}
+
+// ── Ghost-time popup (trophy easter egg) ──────
+function drawGhostTimePopup() {
+  // Dim overlay (lighter than sign-in so you can still see the start screen)
+  ctx.fillStyle = 'rgba(0, 0, 16, 0.62)';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  // Panel
+  const pw = 290, ph = 210;
+  const px = CANVAS_W / 2 - pw / 2;
+  const py = CANVAS_H / 2 - ph / 2;
+
+  // Panel background
+  ctx.fillStyle = 'rgba(4, 0, 24, 0.96)';
+  ctx.beginPath(); ctx.roundRect(px, py, pw, ph, 20); ctx.fill();
+
+  // Neon border (cyan glow)
+  ctx.strokeStyle = 'rgba(0, 220, 255, 0.65)';
+  ctx.lineWidth   = 2;
+  ctx.beginPath(); ctx.roundRect(px, py, pw, ph, 20); ctx.stroke();
+  ctx.shadowBlur  = 14;
+  ctx.shadowColor = 'rgba(0, 220, 255, 0.5)';
+  ctx.beginPath(); ctx.roundRect(px, py, pw, ph, 20); ctx.stroke();
+  ctx.shadowBlur  = 0;
+
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Ghost emoji
+  ctx.font = '36px monospace';
+  ctx.fillText('👻', CANVAS_W / 2, py + 52);
+
+  // "SHADOW PILOT" label
+  ctx.fillStyle = 'rgba(0, 220, 255, 0.9)';
+  ctx.font      = 'bold 13px monospace';
+  ctx.fillText('S H A D O W   P I L O T', CANVAS_W / 2, py + 90);
+
+  // Time display
+  ctx.fillStyle = '#ffffff';
+  ctx.font      = 'bold 38px monospace';
+  ctx.fillText('1:28.4', CANVAS_W / 2, py + 132);
+
+  // Challenge line
+  ctx.fillStyle = 'rgba(180, 230, 255, 0.75)';
+  ctx.font      = '12px monospace';
+  ctx.fillText('Can you beat this ghost time?', CANVAS_W / 2, py + 166);
+
+  // Dismiss hint
+  ctx.fillStyle = 'rgba(100, 140, 180, 0.55)';
+  ctx.font      = '11px monospace';
+  ctx.fillText('tap anywhere to dismiss', CANVAS_W / 2, py + 192);
 
   ctx.textBaseline = 'alphabetic';
 }
@@ -6104,6 +6468,37 @@ function drawLevelBanner() {
   ctx.fillText(`⬆ LEVEL ${state.level}`, CANVAS_W / 2, slideY + 7);
 
   ctx.restore();
+  ctx.textBaseline = 'alphabetic';
+}
+
+// ── Rage-mode timer bar ───────────────────────
+function drawRageBar() {
+  const frac = Math.max(0, state.rageTimer / 12);
+  const bw = 160, bh = 10;
+  const bx = CANVAS_W / 2 - bw / 2;
+  const by = 54;
+
+  // Label
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font         = 'bold 11px monospace';
+  // Pulsing red label
+  const pulse = 0.8 + 0.2 * Math.sin(gameTime * 10);
+  ctx.fillStyle = `rgba(255, 60, 0, ${pulse})`;
+  ctx.fillText('🔥 RAGE MODE', CANVAS_W / 2, by - 8);
+
+  // Track
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+  ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, bh / 2); ctx.fill();
+
+  // Fill
+  const fillG = ctx.createLinearGradient(bx, 0, bx + bw, 0);
+  fillG.addColorStop(0,   '#ff2000');
+  fillG.addColorStop(0.5, '#ff6600');
+  fillG.addColorStop(1,   '#ffaa00');
+  ctx.fillStyle = fillG;
+  ctx.beginPath(); ctx.roundRect(bx, by, bw * frac, bh, bh / 2); ctx.fill();
+
   ctx.textBaseline = 'alphabetic';
 }
 
