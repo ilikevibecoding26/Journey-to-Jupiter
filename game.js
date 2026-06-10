@@ -2793,18 +2793,6 @@ function handleTap(x, y) {
       state.eggFlash = 3.0; // show flash for 3 seconds
     }
   }
-  // ☀️ Sun egg — tap sun (310,115) 5 times for +500 coins
-  if (state.screen === 'start' && Math.hypot(x - 310, y - 115) < 60) {
-    const now = Date.now();
-    if (now - state.sunLastTap > 2000) state.sunTaps = 0;
-    state.sunTaps++; state.sunLastTap = now;
-    if (state.sunTaps >= 5) {
-      state.sunTaps = 0;
-      state.coins += 500; saveCoins(state.coins);
-      state.secretFlash = { life: 3.0, msg: '☀️  SOLAR BONUS  ☀️', sub: '+500 coins added!' };
-    }
-  }
-
   // 🚀 Title egg — tap "JUPITER" text area (centre, y≈144) 4 times → speed boost armed for next run
   if (state.screen === 'start' && Math.abs(x - CANVAS_W/2) < 140 && Math.abs(y - 144) < 36) {
     const now = Date.now();
@@ -2814,18 +2802,6 @@ function handleTap(x, y) {
       state.titleTaps = 0;
       state.titleBoostArmed = true;
       state.secretFlash = { life: 3.0, msg: '⚡  HYPERDRIVE ARMED  ⚡', sub: 'Speed boost ready for your next run!' };
-    }
-  }
-
-  // 🪙 Coin badge egg — tap coin balance (top-left, ~x=55,y=36) 10 times → double coins
-  if (state.screen === 'start' && x < 115 && y < 62) {
-    const now = Date.now();
-    if (now - state.coinLastTap > 2000) state.coinTaps = 0;
-    state.coinTaps++; state.coinLastTap = now;
-    if (state.coinTaps >= 10) {
-      state.coinTaps = 0;
-      state.coins = Math.min(state.coins * 2, 99999); saveCoins(state.coins);
-      state.secretFlash = { life: 3.0, msg: '🪙  COIN DOUBLED  🪙', sub: `Balance is now ${state.coins}!` };
     }
   }
 
