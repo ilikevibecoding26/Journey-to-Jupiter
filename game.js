@@ -2444,6 +2444,8 @@ const state = {
   backTaps: 0, backLastTap: 0,
   // Rage mode — 3 consecutive hits → rocket turns red, meteors explode
   rageMode: false, rageTimer: 0, consecutiveHits: 0,
+  // Revive — one paid revival per run from game over screen
+  reviveUsed: false, reviveCountdown: 0,
   secretFlash: { life: 0, msg: '', sub: '' },  // shared flash banner for new secrets
   newAchievements: [],           // achievements unlocked since last start screen visit
   dailyChallengeJustCompleted: false,
@@ -2962,6 +2964,20 @@ function handleTap(x, y) {
     saveSettings();
   }
   if (state.screen === 'playing'  && hitButton(EXIT_BTN,       x, y)) goMainMenu();
+  if (state.screen === 'gameover' && hitButton(REVIVE_BTN, x, y)) {
+    if (!state.reviveUsed && state.coins >= 100) {
+      state.coins -= 100;
+      saveCoins(state.coins);
+      state.reviveUsed      = true;
+      state.lives           = 1;
+      state.rocket.hitTimer = 2.5;   // 2.5s of invincibility after revive
+      state.meteors         = [];    // clear incoming meteors
+      state.hitFlash        = 0;
+      state.reviveCountdown = 3;     // 3-second get-ready countdown
+      state.screen          = 'playing';
+    }
+    return;
+  }
   if (state.screen === 'gameover' && hitButton(TRY_AGAIN_BTN, x, y)) beginLaunch();
   if (state.screen === 'gameover' && hitButton(MAIN_MENU_BTN, x, y)) goMainMenu();
   if (state.screen === 'nameentry' && hitButton(NAME_SUBMIT_BTN, x, y)) submitNameEntry(getNameInputEl().value);
@@ -2981,8 +2997,9 @@ const LEADERBOARD_BACK = { x: CANVAS_W / 2, y: 748, w: 250, h: 58  };  // back t
 const TUTORIAL_BACK   = { x: CANVAS_W / 2,  y: 748, w: 250, h: 58  };  // back to menu
 const SOUND_TOGGLE    = { x: CANVAS_W / 2,  y: 380, w: 280, h: 70  };  // toggle row
 const LAUNCH_BTN      = { x: CANVAS_W / 2, y: 748, w: 250, h: 58 };
-const TRY_AGAIN_BTN   = { x: CANVAS_W / 2, y: 560, w: 250, h: 58 };
-const MAIN_MENU_BTN   = { x: CANVAS_W / 2, y: 648, w: 250, h: 58 };
+const REVIVE_BTN      = { x: CANVAS_W / 2, y: 552, w: 270, h: 62 };
+const TRY_AGAIN_BTN   = { x: CANVAS_W / 2, y: 636, w: 250, h: 58 };
+const MAIN_MENU_BTN   = { x: CANVAS_W / 2, y: 716, w: 250, h: 58 };
 const WIN_PLAY_BTN    = { x: CANVAS_W / 2, y: 720, w: 250, h: 58 };
 const NAME_SUBMIT_BTN = { x: CANVAS_W / 2, y: 530, w: 220, h: 54 };
 const WIN_MENU_BTN    = { x: CANVAS_W / 2, y: 792, w: 250, h: 58 };
@@ -3038,9 +3055,11 @@ function startGame() {
   state.shakeTimer     = 0;
   state.hitFlash       = 0;
   state.backgroundZone = 1;
-  state.rageMode       = false;
-  state.rageTimer      = 0;
+  state.rageMode        = false;
+  state.rageTimer       = 0;
   state.consecutiveHits = 0;
+  state.reviveUsed      = false;
+  state.reviveCountdown = 0;
   // Ghost run — always start fresh recording; activate playback if ghost mode on
   state.ghostPath         = [];
   state.ghostSampleTimer  = 0;
@@ -3343,6 +3362,12 @@ function update(delta) {
 
   // Only run gameplay logic while the game is active
   if (state.screen !== 'playing') return;
+
+  // Revive countdown — hold gameplay frozen for 3 seconds after revival
+  if (state.reviveCountdown > 0) {
+    state.reviveCountdown = Math.max(0, state.reviveCountdown - delta);
+    return;
+  }
 
   state.elapsedTime += delta;   // tick the trip timer
 
@@ -3926,6 +3951,9 @@ function draw() {
 
   // ── Game over overlay ─────────────────────────
   if (state.screen === 'gameover') drawGameOverScreen();
+
+  // ── Revive countdown overlay ──────────────────
+  if (state.screen === 'playing' && state.reviveCountdown > 0) drawReviveCountdown();
 }
 
 
@@ -4216,6 +4244,21 @@ function drawGameOverScreen() {
     }
   }
 
+  // ── REVIVE button (one per run, costs 100 coins) ─
+  if (!state.reviveUsed) {
+    const canAfford = state.coins >= 100;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    if (canAfford) {
+      drawMenuButton(REVIVE_BTN, '⚡ REVIVE  —  100\u{1FA99}', '#6b3a00', '#b86800', '#ffd700');
+    } else {
+      drawMenuButton(REVIVE_BTN, '⚡ REVIVE  —  100\u{1FA99}', '#282828', '#383838', '#555555');
+      ctx.fillStyle = '#994444';
+      ctx.font      = 'bold 12px monospace';
+      ctx.fillText(`you only have ${state.coins}\u{1FA99}`, CANVAS_W / 2, REVIVE_BTN.y + REVIVE_BTN.h / 2 + 14);
+    }
+  }
+
   // ── TRY AGAIN button ──────────────────────────
   drawMenuButton(TRY_AGAIN_BTN, 'TRY AGAIN', '#1a6b20', '#28a030', '#88ffaa');
 
@@ -4223,6 +4266,52 @@ function drawGameOverScreen() {
   drawMenuButton(MAIN_MENU_BTN, 'MAIN MENU', '#1a1a60', '#2828a0', '#8888ff');
 
   ctx.textBaseline = 'alphabetic';
+}
+
+// ── Revive countdown overlay ──────────────────
+function drawReviveCountdown() {
+  const t   = state.reviveCountdown;     // counts down from 3 → 0
+  const num = Math.ceil(t);              // 3, 2, 1  (shows 1 until countdown hits 0)
+
+  // Dark semi-transparent overlay
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  ctx.save();
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+
+  // "REVIVED!" header
+  ctx.fillStyle = '#ffd700';
+  ctx.font      = 'bold 26px monospace';
+  ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 18;
+  ctx.fillText('REVIVED!', CANVAS_W / 2, CANVAS_H / 2 - 90);
+  ctx.shadowBlur = 0;
+
+  // Big countdown number with gentle pulse glow
+  const pulse = 1 + 0.12 * Math.sin(gameTime * 6);   // subtle size throb ~0.88–1.12
+  ctx.save();
+  ctx.translate(CANVAS_W / 2, CANVAS_H / 2);
+  ctx.scale(pulse, pulse);
+  ctx.fillStyle   = '#ffffff';
+  ctx.font        = 'bold 130px monospace';
+  ctx.shadowColor = num === 1 ? '#ff6644' : '#44aaff';
+  ctx.shadowBlur  = 50;
+  ctx.fillText(num > 0 ? String(num) : '', 0, 0);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  // "GET READY!" sub-label
+  ctx.fillStyle = 'rgba(180,180,220,0.85)';
+  ctx.font      = 'bold 16px monospace';
+  ctx.fillText('GET READY!', CANVAS_W / 2, CANVAS_H / 2 + 90);
+
+  // Hearts preview (1 life remaining)
+  ctx.font      = '22px monospace';
+  ctx.fillStyle = '#ff5555';
+  ctx.fillText('♥  1 life remaining', CANVAS_W / 2, CANVAS_H / 2 + 122);
+
+  ctx.restore();
 }
 
 // Reusable pill button for menus
