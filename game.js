@@ -3980,6 +3980,9 @@ function draw() {
 
   // ── Revive countdown overlay ──────────────────
   if (state.screen === 'playing' && state.reviveCountdown > 0) drawReviveCountdown();
+
+  // ── Secret flash (also visible during gameplay / countdown) ──
+  if (state.secretFlash.life > 0) drawSecretFlash();
 }
 
 
