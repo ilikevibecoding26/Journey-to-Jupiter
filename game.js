@@ -4417,17 +4417,29 @@ function applyWheelPrize(prize){
   } else if(prize.type==='rocket'){
     if(!state.unlockedRockets.includes('lucky')){
       state.unlockedRockets.push('lucky');
-      saveUnlocked(state.unlockedRockets);   // saveUnlocked is the correct function for rockets
+      saveUnlocked(state.unlockedRockets);
+      prize.consolation = 0;
+    } else {
+      prize.consolation = 15;
+      state.coins += prize.consolation; saveCoins(state.coins);
     }
   } else if(prize.type==='tail'){
     if(!state.unlockedTails.includes('lucky')){
       state.unlockedTails.push('lucky');
       saveUnlockedTails(state.unlockedTails);
+      prize.consolation = 0;
+    } else {
+      prize.consolation = 15;
+      state.coins += prize.consolation; saveCoins(state.coins);
     }
   } else if(prize.type==='bg'){
     if(!state.unlockedBgs.includes('lucky')){
       state.unlockedBgs.push('lucky');
       saveUnlockedBgs(state.unlockedBgs);
+      prize.consolation = 0;
+    } else {
+      prize.consolation = 15;
+      state.coins += prize.consolation; saveCoins(state.coins);
     }
   }
   saveCurrentProfileData();
@@ -4795,10 +4807,12 @@ function drawWheelScreen(){
     ctx.beginPath();ctx.roundRect(CANVAS_W/2-140,btnY-44,280,90,18);ctx.fill();
     ctx.strokeStyle='#ffd700';ctx.lineWidth=2;ctx.stroke();
     ctx.fillStyle='#ffd700';ctx.font='bold 14px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('YOU WON!', CANVAS_W/2, btnY-22);
+    const isDupe = p.consolation > 0;
+    ctx.fillText(isDupe ? 'ALREADY OWNED!' : 'YOU WON!', CANVAS_W/2, btnY-22);
     ctx.fillStyle='#ffffff';ctx.font='bold 22px monospace';
     let wonLabel='';
     if(p.type==='coins') wonLabel=`${p.amount} COINS`;
+    else if(isDupe) wonLabel=`+${p.consolation}\u{1FA99} INSTEAD`;
     else if(p.type==='rocket') wonLabel='LUCKY ROCKET';
     else if(p.type==='tail') wonLabel='LUCKY TAIL';
     else if(p.type==='bg') wonLabel='LUCKY BACKGROUND';
