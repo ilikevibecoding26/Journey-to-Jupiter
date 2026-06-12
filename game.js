@@ -2446,6 +2446,8 @@ const state = {
   rageMode: false, rageTimer: 0, consecutiveHits: 0,
   // Revive — one paid revival per run from game over screen
   reviveUsed: false, reviveCountdown: 0,
+  // "GAME OVER" text egg — tap it 9× for a free revive
+  gameOverTaps: 0, gameOverLastTap: 0,
   secretFlash: { life: 0, msg: '', sub: '' },  // shared flash banner for new secrets
   newAchievements: [],           // achievements unlocked since last start screen visit
   dailyChallengeJustCompleted: false,
@@ -2964,6 +2966,29 @@ function handleTap(x, y) {
     saveSettings();
   }
   if (state.screen === 'playing'  && hitButton(EXIT_BTN,       x, y)) goMainMenu();
+  // ── "GAME OVER" text egg — tap 9× within 8s for free revive ──
+  if (state.screen === 'gameover') {
+    const goTextX = CANVAS_W / 2, goTextY = 155;  // panelY(100) + 55
+    if (Math.abs(x - goTextX) < 150 && Math.abs(y - goTextY) < 34) {
+      const now = Date.now();
+      if (now - state.gameOverLastTap > 8000) state.gameOverTaps = 0;
+      state.gameOverTaps++;
+      state.gameOverLastTap = now;
+      if (state.gameOverTaps >= 9) {
+        state.gameOverTaps = 0;
+        // Free revive — no coin cost
+        state.reviveUsed      = true;
+        state.lives           = 1;
+        state.rocket.hitTimer = 2.5;
+        state.meteors         = [];
+        state.hitFlash        = 0;
+        state.reviveCountdown = 3;
+        state.screen          = 'playing';
+        state.secretFlash     = { life: 3.5, msg: '😱  FREE REVIVE  😱', sub: 'Easter egg found!' };
+      }
+      return;
+    }
+  }
   if (state.screen === 'gameover' && hitButton(REVIVE_BTN, x, y)) {
     if (!state.reviveUsed && state.coins >= 100) {
       state.coins -= 100;
@@ -3060,6 +3085,7 @@ function startGame() {
   state.consecutiveHits = 0;
   state.reviveUsed      = false;
   state.reviveCountdown = 0;
+  state.gameOverTaps    = 0;
   // Ghost run — always start fresh recording; activate playback if ghost mode on
   state.ghostPath         = [];
   state.ghostSampleTimer  = 0;
