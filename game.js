@@ -4417,17 +4417,17 @@ function applyWheelPrize(prize){
   } else if(prize.type==='rocket'){
     if(!state.unlockedRockets.includes('lucky')){
       state.unlockedRockets.push('lucky');
-      if(typeof saveUnlockedRockets==='function') saveUnlockedRockets(state.unlockedRockets);
+      saveUnlocked(state.unlockedRockets);   // saveUnlocked is the correct function for rockets
     }
   } else if(prize.type==='tail'){
     if(!state.unlockedTails.includes('lucky')){
       state.unlockedTails.push('lucky');
-      if(typeof saveUnlockedTails==='function') saveUnlockedTails(state.unlockedTails);
+      saveUnlockedTails(state.unlockedTails);
     }
   } else if(prize.type==='bg'){
     if(!state.unlockedBgs.includes('lucky')){
       state.unlockedBgs.push('lucky');
-      if(typeof saveUnlockedBgs==='function') saveUnlockedBgs(state.unlockedBgs);
+      saveUnlockedBgs(state.unlockedBgs);
     }
   }
   saveCurrentProfileData();
@@ -4921,8 +4921,10 @@ function drawShopScreen() {
 
   if (state.shopTab === 'rockets') {
     const unlocked = state.unlockedRockets, equipped = state.equippedRocket;
-    for (let i = 0; i < ROCKETS.length; i++) {
-      const r = ROCKETS[i], col = i%2, row = Math.floor(i/2);
+    // Hide wheel-only items unless already won from the spin wheel
+    const shopRocketList = ROCKETS.filter(r => !r.wheelOnly || unlocked.includes(r.id));
+    for (let i = 0; i < shopRocketList.length; i++) {
+      const r = shopRocketList[i], col = i%2, row = Math.floor(i/2);
       const cx = gridLeft + col*(CARD_W+GAP) + CARD_W/2, cy = gridTop + row*(CARD_H+GAP) + CARD_H/2;
       const cardX = cx-CARD_W/2, cardY = cy-CARD_H/2;
       const isOwned = unlocked.includes(r.id), isEquipped = equipped===r.id, canAfford = state.coins>=r.cost;
@@ -4938,8 +4940,10 @@ function drawShopScreen() {
     }
   } else if (state.shopTab === 'tails') {
     const unlocked = state.unlockedTails, equipped = state.equippedTail;
-    for (let i = 0; i < TAILS.length; i++) {
-      const t = TAILS[i], col = i%2, row = Math.floor(i/2);
+    // Hide wheel-only items unless already won from the spin wheel
+    const shopTailList = TAILS.filter(t => !t.wheelOnly || unlocked.includes(t.id));
+    for (let i = 0; i < shopTailList.length; i++) {
+      const t = shopTailList[i], col = i%2, row = Math.floor(i/2);
       const cx = gridLeft + col*(CARD_W+GAP) + CARD_W/2, cy = gridTop + row*(CARD_H+GAP) + CARD_H/2;
       const cardX = cx-CARD_W/2, cardY = cy-CARD_H/2;
       const isOwned = unlocked.includes(t.id), isEquipped = equipped===t.id, canAfford = state.coins>=t.cost;
@@ -4964,7 +4968,7 @@ function drawShopScreen() {
     // ── Backgrounds grid ──────────────────────────────
     const unlocked = state.unlockedBgs, equipped = state.equippedBg;
     // Hide wheel-only and secret items unless the player has already unlocked them
-    const shopBgList = BACKGROUNDS.filter(b => !b.wheelOnly && (!b.secret || unlocked.includes(b.id)));
+    const shopBgList = BACKGROUNDS.filter(b => (!b.wheelOnly || unlocked.includes(b.id)) && (!b.secret || unlocked.includes(b.id)));
     for (let i = 0; i < shopBgList.length; i++) {
       const b = shopBgList[i], col = i%2, row = Math.floor(i/2);
       const cx = gridLeft + col*(CARD_W+GAP) + CARD_W/2, cy = gridTop + row*(CARD_H+GAP) + CARD_H/2;
