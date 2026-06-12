@@ -2828,7 +2828,7 @@ function handleTap(x, y) {
         state.wheelCenterTaps = 0;
         if (!state.unlockedBgs.includes('matrix')) { state.unlockedBgs = [...state.unlockedBgs, 'matrix']; saveUnlockedBgs(state.unlockedBgs); }
         state.equippedBg = 'matrix'; saveEquippedBg('matrix');
-        state.secretFlash = { life: 3.5, msg: '💻  MATRIX UNLOCKED  💻', sub: 'Secret theme equipped!' };
+        state.secretFlash = { life: 3.5, msg: '💻  MATRIX UNLOCKED  💻', sub: 'Hidden feature unlocked!' };
       }
       return;
     }
@@ -2930,7 +2930,7 @@ function handleTap(x, y) {
       state.gearTaps = 0;
       if (!state.unlockedBgs.includes('retrowave')) { state.unlockedBgs = [...state.unlockedBgs, 'retrowave']; saveUnlockedBgs(state.unlockedBgs); }
       state.equippedBg = 'retrowave'; saveEquippedBg('retrowave');
-      state.secretFlash = { life: 3.5, msg: '🌆  RETROWAVE UNLOCKED  🌆', sub: 'Secret theme equipped!' };
+      state.secretFlash = { life: 3.5, msg: '🌆  RETROWAVE UNLOCKED  🌆', sub: 'Hidden feature unlocked!' };
     }
     state.screen = 'start';
     return;
@@ -2984,7 +2984,7 @@ function handleTap(x, y) {
         state.hitFlash        = 0;
         state.reviveCountdown = 3;
         state.screen          = 'playing';
-        state.secretFlash     = { life: 3.5, msg: '😱  FREE REVIVE  😱', sub: 'Easter egg found!' };
+        state.secretFlash     = { life: 3.5, msg: '😱  FREE REVIVE  😱', sub: 'Hidden feature found!' };
       }
       return;
     }
@@ -5182,7 +5182,7 @@ function drawEggFlash() {
   ctx.textBaseline = 'middle';
   ctx.fillStyle    = '#ffd700';
   ctx.font         = 'bold 14px monospace';
-  ctx.fillText('⭐  SECRET UNLOCKED  ⭐', CANVAS_W / 2, by + bh / 2 - 8);
+  ctx.fillText('⭐  HIDDEN FEATURE  ⭐', CANVAS_W / 2, by + bh / 2 - 8);
   ctx.fillStyle = 'rgba(255,220,100,0.75)';
   ctx.font      = '11px monospace';
   ctx.fillText('Everything in the shop is yours!', CANVAS_W / 2, by + bh / 2 + 12);
