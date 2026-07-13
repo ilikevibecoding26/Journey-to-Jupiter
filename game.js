@@ -2908,6 +2908,7 @@ function handleTap(x, y) {
           saveEquippedPack(btn.id);
           saveCurrentProfileData(); break;
         }
+        if (btn.action === 'vip_screen') { state.screen = 'vip'; break; }
         if (btn.action === 'unlock_pack' && btn.canAfford) {
           state.coins -= btn.cost; saveCoins(state.coins);
           const up = loadUnlockedPacks(); up.push(btn.id); saveUnlockedPacks(up);
@@ -3005,6 +3006,28 @@ function handleTap(x, y) {
   }
   if (state.screen === 'gameover' && hitButton(TRY_AGAIN_BTN, x, y)) beginLaunch();
   if (state.screen === 'gameover' && hitButton(MAIN_MENU_BTN, x, y)) goMainMenu();
+  if (state.screen === 'vip' && hitButton(VIP_BACK_BTN, x, y)) { state.screen = 'shop'; state.shopTab = 'packs'; return; }
+  if (state.screen === 'vip' && hitButton(VIP_SUBSCRIBE_BTN, x, y)) {
+    // Unlock all VIP packs locally (replace with real IAP when ready)
+    const vipPacks = PACKS.filter(p => p.vip);
+    const up = loadUnlockedPacks();
+    let anyNew = false;
+    for (const p of vipPacks) {
+      if (!up.includes(p.id)) { up.push(p.id); anyNew = true; }
+    }
+    if (anyNew) {
+      saveUnlockedPacks(up); state.unlockedPacks = up;
+      for (const p of vipPacks) {
+        const ur = loadUnlocked();         if (!ur.includes(p.id+'_rocket')) { ur.push(p.id+'_rocket'); saveUnlocked(ur);         state.unlockedRockets = ur; }
+        const ut = loadUnlockedTails();    if (!ut.includes(p.id+'_tail'))   { ut.push(p.id+'_tail');   saveUnlockedTails(ut);    state.unlockedTails   = ut; }
+        const ub = loadUnlockedBgs();      if (!ub.includes(p.id+'_bg'))     { ub.push(p.id+'_bg');     saveUnlockedBgs(ub);      state.unlockedBgs     = ub; }
+      }
+      saveCurrentProfileData();
+      state.secretFlash = { life: 3.5, msg: '👑  VIP ACTIVATED  👑', sub: '3 exclusive packs unlocked!' };
+    }
+    state.screen = 'shop'; state.shopTab = 'packs';
+    return;
+  }
   if (state.screen === 'nameentry' && hitButton(NAME_SUBMIT_BTN, x, y)) submitNameEntry(getNameInputEl().value);
   if (state.screen === 'win'      && hitButton(WIN_PLAY_BTN,  x, y)) beginLaunch();
   if (state.screen === 'win'      && hitButton(WIN_MENU_BTN,  x, y)) goMainMenu();
@@ -3025,9 +3048,11 @@ const LAUNCH_BTN      = { x: CANVAS_W / 2, y: 748, w: 250, h: 58 };
 const REVIVE_BTN      = { x: CANVAS_W / 2, y: 552, w: 270, h: 62 };
 const TRY_AGAIN_BTN   = { x: CANVAS_W / 2, y: 636, w: 250, h: 58 };
 const MAIN_MENU_BTN   = { x: CANVAS_W / 2, y: 716, w: 250, h: 58 };
-const WIN_PLAY_BTN    = { x: CANVAS_W / 2, y: 720, w: 250, h: 58 };
-const NAME_SUBMIT_BTN = { x: CANVAS_W / 2, y: 530, w: 220, h: 54 };
-const WIN_MENU_BTN    = { x: CANVAS_W / 2, y: 792, w: 250, h: 58 };
+const WIN_PLAY_BTN      = { x: CANVAS_W / 2, y: 720, w: 250, h: 58 };
+const NAME_SUBMIT_BTN   = { x: CANVAS_W / 2, y: 530, w: 220, h: 54 };
+const WIN_MENU_BTN      = { x: CANVAS_W / 2, y: 792, w: 250, h: 58 };
+const VIP_SUBSCRIBE_BTN = { x: CANVAS_W / 2, y: 572, w: 300, h: 62 };
+const VIP_BACK_BTN      = { x: CANVAS_W / 2, y: 660, w: 220, h: 52 };
 const EXIT_BTN        = { x: 36,            y: CANVAS_H - 28, w: 60, h: 40 };  // bottom-left, discrete
 
 function hitButton(btn, px, py) {
@@ -3823,6 +3848,11 @@ function draw() {
     return;
   }
 
+  if (state.screen === 'vip') {
+    drawVipScreen();
+    return;
+  }
+
   if (state.screen === 'launching') {
     drawLaunchAnim();
     return;
@@ -4362,6 +4392,202 @@ function drawMenuButton(btn, label, colorDark, colorMid, textColor) {
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(label, btn.x, btn.y);
+}
+
+// ══════════════════════════════════════════════════════
+//  VIP SCREEN
+// ══════════════════════════════════════════════════════
+
+function drawVipScreen() {
+  // ── Background ────────────────────────────────
+  const bg = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+  bg.addColorStop(0, '#0e0018');
+  bg.addColorStop(0.5, '#1a0038');
+  bg.addColorStop(1, '#080010');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  // Twinkling stars
+  const VIP_STARS = [
+    [42,80,1.5],[310,50,1],[180,110,0.8],[60,200,1.2],[340,160,1],
+    [20,300,1],[280,250,1.4],[90,400,1.2],[350,350,0.9],[155,450,1],
+    [260,500,1],[70,600,1.5],[330,550,1.2],[200,650,1],[120,700,1.8],
+    [370,620,1],[50,720,0.9],[250,680,1.3],[300,750,0.8],[150,770,1],
+  ];
+  for (const [sx, sy, sr] of VIP_STARS) {
+    const tw = 0.45 + 0.55 * Math.sin(gameTime * 1.4 + sx * 0.11);
+    ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(220,180,255,${tw})`; ctx.fill();
+  }
+
+  // Purple glow bloom at top
+  const bloom = ctx.createRadialGradient(CANVAS_W / 2, 0, 0, CANVAS_W / 2, 0, 220);
+  bloom.addColorStop(0, 'rgba(160,40,255,0.30)');
+  bloom.addColorStop(1, 'rgba(160,40,255,0)');
+  ctx.fillStyle = bloom;
+  ctx.fillRect(0, 0, CANVAS_W, 220);
+
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+
+  // ── Crown & title ─────────────────────────────
+  const crownY = 68 + Math.sin(gameTime * 1.8) * 3;
+  ctx.font = '52px sans-serif';
+  ctx.fillText('👑', CANVAS_W / 2, crownY);
+
+  // "VIP PASS" gold gradient
+  const tg = ctx.createLinearGradient(CANVAS_W / 2 - 110, 0, CANVAS_W / 2 + 110, 0);
+  tg.addColorStop(0,   '#b87800');
+  tg.addColorStop(0.4, '#ffd700');
+  tg.addColorStop(0.6, '#fff0a0');
+  tg.addColorStop(1,   '#b87800');
+  ctx.fillStyle = tg;
+  ctx.font      = 'bold 40px monospace';
+  ctx.shadowColor = 'rgba(255,200,0,0.4)'; ctx.shadowBlur = 18;
+  ctx.fillText('VIP PASS', CANVAS_W / 2, 118);
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = 'rgba(210,170,255,0.85)';
+  ctx.font      = '13px monospace';
+  ctx.fillText('Exclusive packs. Unique looks.', CANVAS_W / 2, 150);
+
+  // Gold divider
+  const dg = ctx.createLinearGradient(30, 0, CANVAS_W - 30, 0);
+  dg.addColorStop(0,   'rgba(255,215,0,0)');
+  dg.addColorStop(0.3, 'rgba(255,215,0,0.55)');
+  dg.addColorStop(0.7, 'rgba(255,215,0,0.55)');
+  dg.addColorStop(1,   'rgba(255,215,0,0)');
+  ctx.strokeStyle = dg; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(30, 168); ctx.lineTo(CANVAS_W - 30, 168); ctx.stroke();
+
+  // ── Pack preview cards ────────────────────────
+  const vipPacks   = PACKS.filter(p => p.vip);
+  const CW = 108, CH = 136, CGAP = 9;
+  const cardsLeft  = (CANVAS_W - (vipPacks.length * CW + (vipPacks.length - 1) * CGAP)) / 2;
+  const cardsTop   = 180;
+
+  for (let i = 0; i < vipPacks.length; i++) {
+    const pk    = vipPacks[i];
+    const cardX = cardsLeft + i * (CW + CGAP);
+    const cardY = cardsTop;
+    const owned = state.unlockedPacks.includes(pk.id);
+
+    // Background preview (clipped to top 65% of card)
+    ctx.save();
+    ctx.beginPath(); ctx.roundRect(cardX, cardY, CW, CH * 0.65, [10, 10, 0, 0]); ctx.clip();
+    ctx.save();
+    ctx.translate(cardX, cardY);
+    ctx.scale(CW / CANVAS_W, (CH * 0.65) / CANVAS_H);
+    pk.drawBg();
+    ctx.restore();
+    ctx.restore();
+
+    // Bottom name band
+    ctx.beginPath(); ctx.roundRect(cardX, cardY + CH * 0.65, CW, CH * 0.35, [0, 0, 10, 10]);
+    ctx.fillStyle = 'rgba(8,0,22,0.90)'; ctx.fill();
+
+    // Card border
+    ctx.beginPath(); ctx.roundRect(cardX, cardY, CW, CH, 10);
+    ctx.strokeStyle = owned ? '#ffd700' : 'rgba(180,80,255,0.55)';
+    ctx.lineWidth   = owned ? 2 : 1.5; ctx.stroke();
+
+    // Mini rocket centred on the band
+    ctx.save();
+    ctx.translate(cardX + CW * 0.5, cardY + CH * 0.73);
+    ctx.scale(0.28, 0.28);
+    pk.drawRocket(0, 0);
+    ctx.restore();
+
+    // Pack name
+    ctx.fillStyle    = '#ffffff';
+    ctx.font         = 'bold 10px monospace';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(pk.emoji + ' ' + pk.name, cardX + CW / 2, cardY + CH - 22);
+
+    // Owned badge
+    if (owned) {
+      ctx.fillStyle = '#ffd700';
+      ctx.font      = 'bold 9px monospace';
+      ctx.fillText('✓ OWNED', cardX + CW / 2, cardY + CH - 9);
+    }
+  }
+
+  // ── Benefits ──────────────────────────────────
+  const bY = cardsTop + CH + 18;   // = 334
+
+  ctx.fillStyle    = 'rgba(200,155,255,0.65)';
+  ctx.font         = 'bold 11px monospace';
+  ctx.textAlign    = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText("WHAT'S INCLUDED", 36, bY);
+
+  ctx.strokeStyle = 'rgba(255,215,0,0.25)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(36, bY + 11); ctx.lineTo(CANVAS_W - 36, bY + 11); ctx.stroke();
+
+  const BENEFITS = [
+    '3 exclusive themed packs',
+    'Custom rocket, trail & background',
+    'Exclusive meteor skins per pack',
+    'More packs added over time',
+  ];
+  for (let i = 0; i < BENEFITS.length; i++) {
+    const ry = bY + 28 + i * 28;
+    ctx.fillStyle    = '#ffd700';
+    ctx.font         = 'bold 14px monospace';
+    ctx.textAlign    = 'center';
+    ctx.fillText('✓', 50, ry);
+    ctx.fillStyle    = '#e8e0ff';
+    ctx.font         = '12px monospace';
+    ctx.textAlign    = 'left';
+    ctx.fillText(BENEFITS[i], 64, ry);
+  }
+
+  // ── Price pill ────────────────────────────────
+  const priceY = bY + 28 + BENEFITS.length * 28 + 20;  // ≈ 490
+  ctx.beginPath(); ctx.roundRect(CANVAS_W / 2 - 115, priceY - 22, 230, 44, 22);
+  const pg = ctx.createLinearGradient(CANVAS_W / 2 - 115, 0, CANVAS_W / 2 + 115, 0);
+  pg.addColorStop(0,   'rgba(90,0,160,0.45)');
+  pg.addColorStop(0.5, 'rgba(130,0,220,0.55)');
+  pg.addColorStop(1,   'rgba(90,0,160,0.45)');
+  ctx.fillStyle   = pg; ctx.fill();
+  ctx.strokeStyle = 'rgba(190,90,255,0.65)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  ctx.fillStyle    = '#ffffff';
+  ctx.font         = 'bold 24px monospace';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('$2.99', CANVAS_W / 2 - 22, priceY);
+  ctx.fillStyle = 'rgba(210,170,255,0.8)';
+  ctx.font      = '13px monospace';
+  ctx.fillText('/ month', CANVAS_W / 2 + 42, priceY);
+
+  // ── Subscribe button (animated shimmer) ───────
+  const sb = VIP_SUBSCRIBE_BTN;
+  ctx.beginPath(); ctx.roundRect(sb.x - sb.w / 2, sb.y - sb.h / 2, sb.w, sb.h, sb.h / 2);
+  const sh   = (Math.sin(gameTime * 2.2) + 1) / 2;
+  const shg  = ctx.createLinearGradient(sb.x - sb.w / 2, 0, sb.x + sb.w / 2, 0);
+  shg.addColorStop(0,                        '#6600bb');
+  shg.addColorStop(Math.max(0,   sh - 0.18), '#8800dd');
+  shg.addColorStop(sh,                       '#cc66ff');
+  shg.addColorStop(Math.min(1,   sh + 0.18), '#8800dd');
+  shg.addColorStop(1,                        '#6600bb');
+  ctx.fillStyle   = shg; ctx.fill();
+  ctx.strokeStyle = '#cc88ff'; ctx.lineWidth = 2;
+  ctx.shadowColor = 'rgba(200,100,255,0.6)'; ctx.shadowBlur = 16;
+  ctx.stroke();
+  ctx.shadowBlur  = 0;
+
+  ctx.fillStyle    = '#ffffff';
+  ctx.font         = 'bold 22px monospace';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('👑  SUBSCRIBE', sb.x, sb.y);
+
+  // ── Back button ───────────────────────────────
+  drawMenuButton(VIP_BACK_BTN, '← BACK', '#1a1a60', '#2828a0', '#8888ff');
+
+  ctx.textBaseline = 'alphabetic';
 }
 
 // ══════════════════════════════════════════════════════
@@ -5054,7 +5280,7 @@ function drawShopScreen() {
       ctx.strokeStyle = bdCol; ctx.lineWidth = 1.2; ctx.stroke();
       ctx.fillStyle = txtCol; ctx.font = 'bold 11px monospace';
       ctx.fillText(lbl, btnX, btnY);
-      const action = isOwned ? 'equip_pack' : (canAfford ? 'unlock_pack' : null);
+      const action = isOwned ? 'equip_pack' : (pk.vip ? 'vip_screen' : (canAfford ? 'unlock_pack' : null));
       if (action) shopButtons.push({ id: pk.id, cost: pk.cost, action, x: btnX, y: btnY, w: btnW, h: btnH, canAfford });
     }
   }
@@ -5693,7 +5919,11 @@ function submitAuth(){
           saveLocalAccounts(accounts);
           finishAuth(uname);
         })
-        .catch(()=>{ state.authError='Network error — try again'; state.authLoading=false; });
+        .catch((err)=>{
+          console.error('Supabase login error:', err);
+          state.authError='Server unreachable — if you signed up here before, try again. Otherwise sign up fresh.';
+          state.authLoading=false;
+        });
     }
   }
 }
