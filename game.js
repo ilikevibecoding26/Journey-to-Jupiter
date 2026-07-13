@@ -4197,7 +4197,7 @@ function drawWinScreen() {
   ctx.font         = 'bold 30px monospace';
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('JUPITER REACHED!', CANVAS_W / 2, panelY + 32);
+  ctx.fillText('JUPITER REACHED!', CANVAS_W / 2, panelY + 32, CANVAS_W - 80);
 
   // Trip time (big)
   const isNewRecord = state.leaderboard[0]?.time === state.elapsedTime;
@@ -4207,11 +4207,11 @@ function drawWinScreen() {
   if (isNewRecord) {
     ctx.fillStyle = '#ffdd44';
     ctx.font      = 'bold 11px monospace';
-    ctx.fillText('★ NEW RECORD! ★', CANVAS_W / 2, panelY + 90);
+    ctx.fillText('★ NEW RECORD! ★', CANVAS_W / 2, panelY + 90, CANVAS_W - 80);
   } else {
     ctx.fillStyle = '#888899';
     ctx.font      = '11px monospace';
-    ctx.fillText(`BEST  ${formatTime(state.leaderboard[0]?.time || 0)}`, CANVAS_W / 2, panelY + 90);
+    ctx.fillText(`BEST  ${formatTime(state.leaderboard[0]?.time || 0)}`, CANVAS_W / 2, panelY + 90, CANVAS_W - 80);
   }
   ctx.fillStyle = 'rgba(255,255,255,0.4)';
   ctx.font      = '12px monospace';
@@ -4224,7 +4224,7 @@ function drawWinScreen() {
     const posLabel = pos >= 0 ? medalLabels[pos] : '';
     ctx.fillStyle    = '#ffd700';
     ctx.font         = 'bold 15px monospace';
-    ctx.fillText(`🪙 +${state.coinsEarned} coins  ${posLabel ? '(' + posLabel + ' PLACE)' : ''}`, CANVAS_W / 2, panelY + 136);
+    ctx.fillText(`🪙 +${state.coinsEarned} coins  ${posLabel ? '(' + posLabel + ' PLACE)' : ''}`, CANVAS_W / 2, panelY + 136, CANVAS_W - 80);
     ctx.fillStyle = 'rgba(255, 215, 0, 0.55)';
     ctx.font      = '12px monospace';
     ctx.fillText(`total: ${state.coins} 🪙`, CANVAS_W / 2, panelY + 155);
@@ -4283,7 +4283,7 @@ function drawGameOverScreen() {
   // Fastest trips leaderboard header
   ctx.fillStyle = '#7a7aaa';
   ctx.font      = 'bold 12px monospace';
-  ctx.fillText('FASTEST TRIPS TO JUPITER', CANVAS_W / 2, panelY + 180);
+  ctx.fillText('FASTEST TRIPS TO JUPITER', CANVAS_W / 2, panelY + 180, CANVAS_W - 80);
 
   // Top 5 rows (times, ascending)
   const board   = state.leaderboard;
@@ -4291,7 +4291,7 @@ function drawGameOverScreen() {
   if (board.length === 0) {
     ctx.fillStyle = '#555577';
     ctx.font      = '12px monospace';
-    ctx.fillText('Reach Jupiter to set a record!', CANVAS_W / 2, panelY + 210);
+    ctx.fillText('Reach Jupiter to set a record!', CANVAS_W / 2, panelY + 210, CANVAS_W - 80);
   } else {
     for (let i = 0; i < Math.min(board.length, 5); i++) {
       const rowY = panelY + 206 + i * 34;
@@ -4299,7 +4299,7 @@ function drawGameOverScreen() {
       ctx.font      = `bold 14px monospace`;
       const entry = board[i]; const isMe = entry?.time === state.elapsedTime;
       ctx.fillStyle = isMe ? '#ffee88' : (i === 0 ? '#ffd700' : '#ccccee');
-      ctx.fillText(`${medals[i]}  ${(entry?.name||'PILOT').padEnd(8)}  ${formatTime(entry?.time||0)}`, CANVAS_W / 2, rowY);
+      ctx.fillText(`${medals[i]}  ${(entry?.name||'PILOT').padEnd(8)}  ${formatTime(entry?.time||0)}`, CANVAS_W / 2, rowY, CANVAS_W - 80);
     }
   }
 
@@ -4314,7 +4314,7 @@ function drawGameOverScreen() {
       drawMenuButton(REVIVE_BTN, '⚡ REVIVE  —  100\u{1FA99}', '#282828', '#383838', '#555555');
       ctx.fillStyle = '#994444';
       ctx.font      = 'bold 12px monospace';
-      ctx.fillText(`you only have ${state.coins}\u{1FA99}`, CANVAS_W / 2, REVIVE_BTN.y + REVIVE_BTN.h / 2 + 14);
+      ctx.fillText(`you only have ${state.coins}\u{1FA99}`, CANVAS_W / 2, REVIVE_BTN.y + REVIVE_BTN.h / 2 + 14, CANVAS_W - 80);
     }
   }
 
@@ -4363,12 +4363,12 @@ function drawReviveCountdown() {
   // "GET READY!" sub-label
   ctx.fillStyle = 'rgba(180,180,220,0.85)';
   ctx.font      = 'bold 16px monospace';
-  ctx.fillText('GET READY!', CANVAS_W / 2, CANVAS_H / 2 + 90);
+  ctx.fillText('GET READY!', CANVAS_W / 2, CANVAS_H / 2 + 90, CANVAS_W - 40);
 
   // Hearts preview (1 life remaining)
   ctx.font      = '22px monospace';
   ctx.fillStyle = '#ff5555';
-  ctx.fillText('♥  1 life remaining', CANVAS_W / 2, CANVAS_H / 2 + 122);
+  ctx.fillText('♥  1 life remaining', CANVAS_W / 2, CANVAS_H / 2 + 122, CANVAS_W - 40);
 
   ctx.restore();
 }
@@ -4391,7 +4391,7 @@ function drawMenuButton(btn, label, colorDark, colorMid, textColor) {
   ctx.font         = 'bold 20px monospace';
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(label, btn.x, btn.y);
+  ctx.fillText(label, btn.x, btn.y, btn.w - 16);
 }
 
 // ══════════════════════════════════════════════════════
@@ -4977,7 +4977,7 @@ function drawWheelScreen(){
   const canSpin=canSpinToday();
   ctx.font='bold 12px monospace';
   ctx.fillStyle=canSpin?'#aaffaa':'#ff8888';
-  ctx.fillText(canSpin?'Spin available!':'Come back tomorrow', CANVAS_W/2, 62);
+  ctx.fillText(canSpin?'Spin available!':'Come back tomorrow', CANVAS_W/2, 62, CANVAS_W - 40);
 
   // ── Draw wheel ──────────────────────────────────────
   const WX=CANVAS_W/2, WY=320, WR=148;
@@ -5035,7 +5035,7 @@ function drawWheelScreen(){
     ctx.strokeStyle='#ffd700';ctx.lineWidth=2;ctx.stroke();
     ctx.fillStyle='#ffd700';ctx.font='bold 14px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
     const isDupe = p.consolation > 0;
-    ctx.fillText(isDupe ? 'ALREADY OWNED!' : 'YOU WON!', CANVAS_W/2, btnY-22);
+    ctx.fillText(isDupe ? 'ALREADY OWNED!' : 'YOU WON!', CANVAS_W/2, btnY-22, 260);
     ctx.fillStyle='#ffffff';ctx.font='bold 22px monospace';
     let wonLabel='';
     if(p.type==='coins') wonLabel=`${p.amount} COINS`;
@@ -5043,9 +5043,9 @@ function drawWheelScreen(){
     else if(p.type==='rocket') wonLabel='LUCKY ROCKET';
     else if(p.type==='tail') wonLabel='LUCKY TAIL';
     else if(p.type==='bg') wonLabel='LUCKY BACKGROUND';
-    ctx.fillText(wonLabel, CANVAS_W/2, btnY+6);
+    ctx.fillText(wonLabel, CANVAS_W/2, btnY+6, 260);
     ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='bold 11px monospace';
-    ctx.fillText('Tap to continue', CANVAS_W/2, btnY+30);
+    ctx.fillText('Tap to continue', CANVAS_W/2, btnY+30, 260);
   }
 
   // Back button
@@ -5090,7 +5090,7 @@ function drawShopScreen() {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('🛒  SHOP', CANVAS_W / 2, 30);
   ctx.fillStyle = '#ffd700'; ctx.font = 'bold 13px monospace';
-  ctx.fillText(`🪙 ${state.coins}  coins available`, CANVAS_W / 2, 54);
+  ctx.fillText(`🪙 ${state.coins}  coins available`, CANVAS_W / 2, 54, CANVAS_W - 40);
 
   // ── Tabs ──────────────────────────────────────────────
   const TAB_Y = 70, TAB_H = 32, TAB_W = 88, TAB_GAP = 5;
@@ -5109,7 +5109,7 @@ function drawShopScreen() {
     ctx.strokeStyle = active ? '#ff8c55' : 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1.5; ctx.stroke();
     ctx.fillStyle = active ? '#fff' : 'rgba(255,255,255,0.45)';
     ctx.font = 'bold 13px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(tab.label, tab.x, tab.y);
+    ctx.fillText(tab.label, tab.x, tab.y, TAB_W - 8);
     shopButtons.push({ action: 'tab', id: tab.id, x: tab.x, y: tab.y, w: TAB_W, h: TAB_H });
   }
 
@@ -5136,7 +5136,7 @@ function drawShopScreen() {
     previewFn();
     ctx.fillStyle = isOwned ? '#ffffff' : 'rgba(180,180,210,0.7)';
     ctx.font = 'bold 13px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(name, cx, cardY + CARD_H - 42);
+    ctx.fillText(name, cx, cardY + CARD_H - 42, CARD_W - 8);
     const btnW = 126, btnH = 28, btnX = cx, btnY = cardY + CARD_H - 18;
     let lbl, bgCol, bdCol, txtCol;
     if (packLockLabel) {
@@ -5156,7 +5156,7 @@ function drawShopScreen() {
     ctx.beginPath(); ctx.roundRect(btnX-btnW/2, btnY-btnH/2, btnW, btnH, 7);
     ctx.fillStyle=bgCol; ctx.fill(); ctx.strokeStyle=bdCol; ctx.lineWidth=1; ctx.stroke();
     ctx.fillStyle=txtCol; ctx.font='bold 11px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(lbl, btnX, btnY);
+    ctx.fillText(lbl, btnX, btnY, btnW - 8);
     if (!isEquipped && !packLockLabel) shopButtons.push({ id, cost, action, x: btnX, y: btnY, w: btnW, h: btnH, canAfford });
   }
 
@@ -5255,10 +5255,10 @@ function drawShopScreen() {
       ctx.save(); ctx.translate(cx - PCARD_W*0.12, cy - 5); ctx.scale(0.38, 0.38); pk.drawRocket(0, 0); ctx.restore();
       // Pack name
       ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(pk.emoji + ' ' + pk.name, cx + PCARD_W*0.18, cardY + PCARD_H * 0.30);
+      ctx.fillText(pk.emoji + ' ' + pk.name, cx + PCARD_W*0.18, cardY + PCARD_H * 0.30, PCARD_W * 0.58);
       // Description
       ctx.fillStyle = 'rgba(180,180,210,0.8)'; ctx.font = '10px monospace';
-      ctx.fillText('Rocket  Trail  Background  Meteors', cx + PCARD_W*0.18, cardY + PCARD_H * 0.52);
+      ctx.fillText('Rocket  Trail  Background  Meteors', cx + PCARD_W*0.18, cardY + PCARD_H * 0.52, PCARD_W * 0.58);
       // Button
       const btnW = 140, btnH = 28, btnX = cx + PCARD_W*0.18, btnY = cardY + PCARD_H - 22;
       let lbl, bgCol, bdCol, txtCol;
@@ -5280,7 +5280,7 @@ function drawShopScreen() {
       ctx.fillStyle = bgCol; ctx.fill();
       ctx.strokeStyle = bdCol; ctx.lineWidth = 1.2; ctx.stroke();
       ctx.fillStyle = txtCol; ctx.font = 'bold 11px monospace';
-      ctx.fillText(lbl, btnX, btnY);
+      ctx.fillText(lbl, btnX, btnY, btnW - 8);
       const action = isOwned ? 'equip_pack' : (pk.vip ? 'vip_screen' : (canAfford ? 'unlock_pack' : null));
       if (action) shopButtons.push({ id: pk.id, cost: pk.cost, action, x: btnX, y: btnY, w: btnW, h: btnH, canAfford });
     }
@@ -5333,7 +5333,7 @@ function drawLeaderboardScreen() {
   // Subtitle
   ctx.fillStyle = '#8888aa';
   ctx.font      = '11px monospace';
-  ctx.fillText('FASTEST TRIPS TO JUPITER  •  GLOBAL', CANVAS_W / 2, 204);
+  ctx.fillText('FASTEST TRIPS TO JUPITER  •  GLOBAL', CANVAS_W / 2, 204, CANVAS_W - 40);
 
   // Divider
   ctx.strokeStyle = 'rgba(255,255,255,0.1)';
@@ -5365,7 +5365,7 @@ function drawLeaderboardScreen() {
     ctx.textBaseline = 'middle';
     ctx.fillText('No records yet!', CANVAS_W / 2, 360);
     ctx.font = '12px monospace';
-    ctx.fillText('Reach Jupiter to set your first time.', CANVAS_W / 2, 390);
+    ctx.fillText('Reach Jupiter to set your first time.', CANVAS_W / 2, 390, CANVAS_W - 40);
   } else {
     const maxRows = Math.min(board.length, isGlobal ? 10 : 5);
     const rowH = isGlobal ? 54 : 68;
@@ -5427,10 +5427,10 @@ function drawEggFlash() {
   ctx.textBaseline = 'middle';
   ctx.fillStyle    = '#ffd700';
   ctx.font         = 'bold 14px monospace';
-  ctx.fillText('⭐  HIDDEN FEATURE  ⭐', CANVAS_W / 2, by + bh / 2 - 8);
+  ctx.fillText('⭐  HIDDEN FEATURE  ⭐', CANVAS_W / 2, by + bh / 2 - 8, bw - 16);
   ctx.fillStyle = 'rgba(255,220,100,0.75)';
   ctx.font      = '11px monospace';
-  ctx.fillText('Everything in the shop is yours!', CANVAS_W / 2, by + bh / 2 + 12);
+  ctx.fillText('Everything in the shop is yours!', CANVAS_W / 2, by + bh / 2 + 12, bw - 16);
 
   ctx.restore();
   ctx.textBaseline = 'alphabetic';
@@ -5449,9 +5449,9 @@ function drawSecretFlash() {
   ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 14); ctx.stroke();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillStyle = '#ffd700'; ctx.font = 'bold 14px monospace';
-  ctx.fillText(msg, CANVAS_W / 2, by + bh / 2 - 9);
+  ctx.fillText(msg, CANVAS_W / 2, by + bh / 2 - 9, bw - 16);
   ctx.fillStyle = 'rgba(255,220,100,0.8)'; ctx.font = '11px monospace';
-  ctx.fillText(sub, CANVAS_W / 2, by + bh / 2 + 12);
+  ctx.fillText(sub, CANVAS_W / 2, by + bh / 2 + 12, bw - 16);
   ctx.restore();
   ctx.textBaseline = 'alphabetic';
 }
@@ -5486,13 +5486,13 @@ function drawSignInPrompt() {
   // Subtitle
   ctx.fillStyle = 'rgba(180, 180, 220, 0.85)';
   ctx.font      = '12px monospace';
-  ctx.fillText('Create an account to access', CANVAS_W / 2, py + 126);
-  ctx.fillText('all features.', CANVAS_W / 2, py + 144);
+  ctx.fillText('Create an account to access', CANVAS_W / 2, py + 126, pw - 20);
+  ctx.fillText('all features.', CANVAS_W / 2, py + 144, pw - 20);
 
   // Tap-anywhere hint
   ctx.fillStyle = 'rgba(120, 120, 160, 0.7)';
   ctx.font      = '11px monospace';
-  ctx.fillText('tap anywhere to dismiss', CANVAS_W / 2, py + 174);
+  ctx.fillText('tap anywhere to dismiss', CANVAS_W / 2, py + 174, pw - 20);
 
   ctx.textBaseline = 'alphabetic';
 }
@@ -5531,7 +5531,7 @@ function drawGhostTimePopup() {
   // "SHADOW PILOT" label
   ctx.fillStyle = 'rgba(0, 220, 255, 0.9)';
   ctx.font      = 'bold 13px monospace';
-  ctx.fillText('S H A D O W   P I L O T', CANVAS_W / 2, py + 86);
+  ctx.fillText('S H A D O W   P I L O T', CANVAS_W / 2, py + 86, pw - 20);
 
   // Time display — show real saved time or "no data yet"
   ctx.fillStyle = '#ffffff';
@@ -5542,21 +5542,21 @@ function drawGhostTimePopup() {
     ctx.fillText(`${m}:${s}`, CANVAS_W / 2, py + 126);
     ctx.fillStyle = 'rgba(180, 230, 255, 0.75)';
     ctx.font      = '12px monospace';
-    ctx.fillText('A ghost will shadow your next run.', CANVAS_W / 2, py + 158);
-    ctx.fillText('Outlast it for +50 coins!', CANVAS_W / 2, py + 174);
+    ctx.fillText('A ghost will shadow your next run.', CANVAS_W / 2, py + 158, pw - 20);
+    ctx.fillText('Outlast it for +50 coins!', CANVAS_W / 2, py + 174, pw - 20);
   } else {
     ctx.font = 'bold 16px monospace';
     ctx.fillText('No ghost recorded yet.', CANVAS_W / 2, py + 120);
     ctx.fillStyle = 'rgba(180, 230, 255, 0.75)';
     ctx.font      = '12px monospace';
-    ctx.fillText('Play a run first — your ghost', CANVAS_W / 2, py + 150);
-    ctx.fillText('will be recorded automatically.', CANVAS_W / 2, py + 166);
+    ctx.fillText('Play a run first — your ghost', CANVAS_W / 2, py + 150, pw - 20);
+    ctx.fillText('will be recorded automatically.', CANVAS_W / 2, py + 166, pw - 20);
   }
 
   // Dismiss hint
   ctx.fillStyle = 'rgba(100, 140, 180, 0.55)';
   ctx.font      = '11px monospace';
-  ctx.fillText('tap anywhere to dismiss', CANVAS_W / 2, py + 196);
+  ctx.fillText('tap anywhere to dismiss', CANVAS_W / 2, py + 196, pw - 20);
 
   ctx.textBaseline = 'alphabetic';
 }
@@ -5588,7 +5588,7 @@ function drawTutorialScreen() {
   // Subtitle
   ctx.fillStyle = '#8888aa';
   ctx.font      = '11px monospace';
-  ctx.fillText('JOURNEY TO JUPITER — QUICK GUIDE', CANVAS_W / 2, 184);
+  ctx.fillText('JOURNEY TO JUPITER — QUICK GUIDE', CANVAS_W / 2, 184, CANVAS_W - 40);
 
   // Divider
   ctx.strokeStyle = 'rgba(255,255,255,0.1)';
@@ -5639,12 +5639,12 @@ function drawTutorialScreen() {
     ctx.font      = 'bold 13px monospace';
     ctx.fillStyle = '#60d0ff';
     ctx.textAlign = 'left';
-    ctx.fillText(step.title, 104, rowY + 6);
+    ctx.fillText(step.title, 104, rowY + 6, CANVAS_W - 55 - 104);
 
     // Step body
     ctx.font      = '11px monospace';
     ctx.fillStyle = 'rgba(200,200,230,0.80)';
-    ctx.fillText(step.body, 104, rowY + 26);
+    ctx.fillText(step.body, 104, rowY + 26, CANVAS_W - 55 - 104);
   });
 
   ctx.restore();
@@ -5732,7 +5732,7 @@ function drawSettingsScreen() {
     ctx.font = '12px monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('signed in as  ' + state.authUser.username, CANVAS_W / 2, 440);
+    ctx.fillText('signed in as  ' + state.authUser.username, CANVAS_W / 2, 440, CANVAS_W - 80);
   }
 
   // Sign out button
@@ -5828,7 +5828,7 @@ function drawAuthScreen() {
   // Error / loading message
   if(state.authError){
     ctx.fillStyle='#ff6b6b'; ctx.font='bold 13px monospace'; ctx.textAlign='center';
-    ctx.fillText(state.authError,CANVAS_W/2,348);
+    ctx.fillText(state.authError,CANVAS_W/2,348, CANVAS_W - 40);
   } else if(state.authLoading){
     ctx.fillStyle='#ffd700'; ctx.font='bold 15px monospace'; ctx.textAlign='center';
     ctx.fillText('CHECKING...',CANVAS_W/2,348);
@@ -5922,7 +5922,7 @@ function submitAuth(){
         })
         .catch((err)=>{
           console.error('Supabase login error:', err);
-          state.authError='Server unreachable — if you signed up here before, try again. Otherwise sign up fresh.';
+          state.authError='Network error — retry or tap Sign Up';
           state.authLoading=false;
         });
     }
@@ -6204,7 +6204,7 @@ function drawProfileScreen() {
       ctx.fillText('NEW  PILOT', CARD_X + 118, cardY + CARD_H / 2 - 11);
       ctx.fillStyle = 'rgba(135,135,168,0.42)';
       ctx.font      = '11px monospace';
-      ctx.fillText('tap to create a new save slot', CARD_X + 118, cardY + CARD_H / 2 + 12);
+      ctx.fillText('tap to create a new save slot', CARD_X + 118, cardY + CARD_H / 2 + 12, CANVAS_W - CARD_X - 118 - 12);
 
       profileButtons.push({ action: 'new', idx: i, x: CARD_X + CARD_W / 2, y: cardY + CARD_H / 2, w: CARD_W, h: CARD_H });
     }
@@ -6221,7 +6221,7 @@ function drawProfileScreen() {
     ctx.fillStyle = 'rgba(200,180,148,0.5)';
     ctx.font      = '10px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(`${selP.name} IS SELECTED`, CANVAS_W / 2, BOTTOM_Y + 20);
+    ctx.fillText(`${selP.name} IS SELECTED`, CANVAS_W / 2, BOTTOM_Y + 20, CANVAS_W - 40);
 
     // Three action buttons
     const BW = 108, BH = 44, BGAP = 7;
@@ -6264,7 +6264,7 @@ function drawProfileScreen() {
     ctx.fillStyle    = 'rgba(160,160,190,0.38)';
     ctx.font         = '13px monospace';
     ctx.textAlign    = 'center';
-    ctx.fillText('select or create a pilot to play', CANVAS_W / 2, BOTTOM_Y + 30);
+    ctx.fillText('select or create a pilot to play', CANVAS_W / 2, BOTTOM_Y + 30, CANVAS_W - 40);
   }
 }
 
@@ -6376,7 +6376,7 @@ function drawStartScreen() {
     ctx.fillText('DAILY SPIN', bx+48, by+bh/2-8);
     ctx.font='bold 11px monospace';
     ctx.fillStyle=ready?'#aaffaa':'#aa8888';
-    ctx.fillText(ready?'Spin available!':'Come back tomorrow', bx+48, by+bh/2+10);
+    ctx.fillText(ready?'Spin available!':'Come back tomorrow', bx+48, by+bh/2+10, bw - 48 - 28);
     // Arrow
     ctx.font='bold 18px monospace';ctx.textAlign='right';ctx.textBaseline='middle';
     ctx.fillStyle=ready?'rgba(255,255,255,0.7)':'rgba(80,80,100,0.5)';
@@ -6424,7 +6424,7 @@ function drawStartScreen() {
     ctx.font = 'bold 13px monospace';
     ctx.fillStyle = dc.completed ? '#aaffcc' : '#ffffff';
     ctx.textAlign = 'left';
-    ctx.fillText(dc.desc, cL + 12, cT + 36);
+    ctx.fillText(dc.desc, cL + 12, cT + 36, cW - 24);
     // progress bar
     if (!dc.completed) {
       const prog = Math.min(1, dc.progress / dc.target);
@@ -6460,11 +6460,11 @@ function drawStartScreen() {
       ctx.beginPath(); ctx.roundRect(CANVAS_W/2 - 130, aY - 36, 260, 72, 16); ctx.stroke();
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillStyle = '#ffd700'; ctx.font = 'bold 11px monospace';
-      ctx.fillText('🏆 ACHIEVEMENT UNLOCKED', CANVAS_W/2, aY - 16);
+      ctx.fillText('🏆 ACHIEVEMENT UNLOCKED', CANVAS_W/2, aY - 16, 240);
       ctx.fillStyle = '#ffffff'; ctx.font = 'bold 16px monospace';
-      ctx.fillText(ach.name, CANVAS_W/2, aY + 4);
+      ctx.fillText(ach.name, CANVAS_W/2, aY + 4, 240);
       ctx.fillStyle = '#aaaacc'; ctx.font = '11px monospace';
-      ctx.fillText(`${ach.desc}  •  +${ach.reward}🪙`, CANVAS_W/2, aY + 22);
+      ctx.fillText(`${ach.desc}  •  +${ach.reward}🪙`, CANVAS_W/2, aY + 22, 240);
       ctx.restore();
     }
   }
@@ -6485,7 +6485,7 @@ function drawStartScreen() {
     ctx.fillStyle = '#44ff88'; ctx.font = 'bold 13px monospace';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const streakLabel = db.streak > 1 ? ` — DAY ${db.streak} STREAK 🔥` : '';
-    ctx.fillText(`DAILY LOGIN${streakLabel}`, CANVAS_W/2, cy - 18);
+    ctx.fillText(`DAILY LOGIN${streakLabel}`, CANVAS_W/2, cy - 18, 220);
     // coin award
     ctx.fillStyle = '#ffd700'; ctx.font = 'bold 26px monospace';
     ctx.fillText(`+${db.coins} 🪙`, CANVAS_W/2, cy + 14);
@@ -6872,7 +6872,7 @@ function drawZoneBanner() {
   ctx.font         = 'bold 20px monospace';
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(state.zoneAnnounce.text, CANVAS_W / 2, slideY + 8);
+  ctx.fillText(state.zoneAnnounce.text, CANVAS_W / 2, slideY + 8, CANVAS_W - 40);
 
   ctx.restore();
   ctx.textBaseline = 'alphabetic';
@@ -6899,7 +6899,7 @@ function drawLevelBanner() {
   ctx.font         = 'bold 22px monospace';
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(`⬆ LEVEL ${state.level}`, CANVAS_W / 2, slideY + 7);
+  ctx.fillText(`⬆ LEVEL ${state.level}`, CANVAS_W / 2, slideY + 7, 240);
 
   ctx.restore();
   ctx.textBaseline = 'alphabetic';
@@ -7026,7 +7026,7 @@ function drawHUDPill(cx, cy, text, borderColor, textColor) {
   ctx.font         = 'bold 13px monospace';
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(text, cx, cy);
+  ctx.fillText(text, cx, cy, pw - 8);
   ctx.textBaseline = 'alphabetic';
 }
 
@@ -7694,7 +7694,7 @@ function drawCoinMultHUD() {
   ctx.strokeStyle='rgba(100,255,180,0.9)'; ctx.lineWidth=1.5; ctx.stroke();
   ctx.fillStyle='#ffffff'; ctx.font='bold 11px monospace';
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(`×2 COINS  ${Math.ceil(state.coinMultiplierTimer)}s`, px+pw/2, py+ph/2);
+  ctx.fillText(`×2 COINS  ${Math.ceil(state.coinMultiplierTimer)}s`, px+pw/2, py+ph/2, pw - 4);
   ctx.restore();
 }
 function drawFirstRunHUD() {
@@ -7708,7 +7708,7 @@ function drawFirstRunHUD() {
   ctx.strokeStyle='rgba(255,210,60,0.9)'; ctx.lineWidth=1.5; ctx.stroke();
   ctx.fillStyle='#ffffff'; ctx.font='bold 11px monospace';
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('⭐ FIRST RUN ×2', px+pw/2, py+ph/2);
+  ctx.fillText('⭐ FIRST RUN ×2', px+pw/2, py+ph/2, pw - 4);
   ctx.restore();
 }
 
