@@ -4444,7 +4444,7 @@ function drawVipScreen() {
   ctx.fillStyle = tg;
   ctx.font      = 'bold 40px monospace';
   ctx.shadowColor = 'rgba(255,200,0,0.4)'; ctx.shadowBlur = 18;
-  ctx.fillText('VIP PASS', CANVAS_W / 2, 118);
+  ctx.fillText('VIP PASS', CANVAS_W / 2, 118, CANVAS_W - 40);
   ctx.shadowBlur = 0;
 
   ctx.fillStyle = 'rgba(210,170,255,0.85)';
@@ -4503,13 +4503,13 @@ function drawVipScreen() {
     ctx.font         = 'bold 10px monospace';
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(pk.emoji + ' ' + pk.name, cardX + CW / 2, cardY + CH - 22);
+    ctx.fillText(pk.emoji + ' ' + pk.name, cardX + CW / 2, cardY + CH - 22, CW - 8);
 
     // Owned badge
     if (owned) {
       ctx.fillStyle = '#ffd700';
       ctx.font      = 'bold 9px monospace';
-      ctx.fillText('✓ OWNED', cardX + CW / 2, cardY + CH - 9);
+      ctx.fillText('✓ OWNED', cardX + CW / 2, cardY + CH - 9, CW - 8);
     }
   }
 
@@ -4555,13 +4555,13 @@ function drawVipScreen() {
   ctx.strokeStyle = 'rgba(190,90,255,0.65)'; ctx.lineWidth = 1.5; ctx.stroke();
 
   ctx.fillStyle    = '#ffffff';
-  ctx.font         = 'bold 24px monospace';
+  ctx.font         = 'bold 22px monospace';
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('$2.99', CANVAS_W / 2 - 22, priceY);
+  ctx.fillText('$2.99', CANVAS_W / 2 - 28, priceY);
   ctx.fillStyle = 'rgba(210,170,255,0.8)';
   ctx.font      = '13px monospace';
-  ctx.fillText('/ month', CANVAS_W / 2 + 42, priceY);
+  ctx.fillText('/ month', CANVAS_W / 2 + 38, priceY);
 
   // ── Subscribe button (animated shimmer) ───────
   const sb = VIP_SUBSCRIBE_BTN;
@@ -4583,7 +4583,7 @@ function drawVipScreen() {
   ctx.font         = 'bold 22px monospace';
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('👑  SUBSCRIBE', sb.x, sb.y);
+  ctx.fillText('👑  SUBSCRIBE', sb.x, sb.y, sb.w - 24);
 
   // ── Back button ───────────────────────────────
   drawMenuButton(VIP_BACK_BTN, '← BACK', '#1a1a60', '#2828a0', '#8888ff');
