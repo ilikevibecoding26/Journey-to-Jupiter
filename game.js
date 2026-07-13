@@ -4448,8 +4448,8 @@ function drawVipScreen() {
   ctx.shadowBlur = 0;
 
   ctx.fillStyle = 'rgba(210,170,255,0.85)';
-  ctx.font      = '13px monospace';
-  ctx.fillText('Exclusive packs. Unique looks.', CANVAS_W / 2, 150);
+  ctx.font      = '12px monospace';
+  ctx.fillText('Exclusive packs. Unique looks.', CANVAS_W / 2, 150, CANVAS_W - 40);
 
   // Gold divider
   const dg = ctx.createLinearGradient(30, 0, CANVAS_W - 30, 0);
@@ -4531,16 +4531,17 @@ function drawVipScreen() {
     'Exclusive meteor skins per pack',
     'More packs added over time',
   ];
+  const benefitMaxW = CANVAS_W - 64 - 20;
   for (let i = 0; i < BENEFITS.length; i++) {
     const ry = bY + 28 + i * 28;
     ctx.fillStyle    = '#ffd700';
-    ctx.font         = 'bold 14px monospace';
+    ctx.font         = 'bold 13px monospace';
     ctx.textAlign    = 'center';
     ctx.fillText('✓', 50, ry);
     ctx.fillStyle    = '#e8e0ff';
     ctx.font         = '12px monospace';
     ctx.textAlign    = 'left';
-    ctx.fillText(BENEFITS[i], 64, ry);
+    ctx.fillText(BENEFITS[i], 64, ry, benefitMaxW);
   }
 
   // ── Price pill ────────────────────────────────
