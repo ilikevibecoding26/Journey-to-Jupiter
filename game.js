@@ -70,6 +70,11 @@ function saveAuthSession(obj) {
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+// True on desktop (mouse + hover), false on touch devices
+const isDesktop = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+const TAP = isDesktop ? 'Click' : 'Tap';   // sentence-case
+const tap = isDesktop ? 'click' : 'tap';   // lowercase
+
 // The game always renders at this internal size.
 // CSS scales the canvas element to fit the screen.
 const CANVAS_W = 390;
@@ -5089,7 +5094,7 @@ function drawWheelScreen(){
     else if(p.type==='bg') wonLabel='LUCKY BACKGROUND';
     ctx.fillText(wonLabel, CANVAS_W/2, btnY+6, 260);
     ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='bold 11px monospace';
-    ctx.fillText('Tap to continue', CANVAS_W/2, btnY+30, 260);
+    ctx.fillText(`${TAP} to continue`, CANVAS_W/2, btnY+30, 260);
   }
 
   // Back button
@@ -5536,7 +5541,7 @@ function drawSignInPrompt() {
   // Tap-anywhere hint
   ctx.fillStyle = 'rgba(120, 120, 160, 0.7)';
   ctx.font      = '11px monospace';
-  ctx.fillText('tap anywhere to dismiss', CANVAS_W / 2, py + 174, pw - 20);
+  ctx.fillText(`${tap} anywhere to dismiss`, CANVAS_W / 2, py + 174, pw - 20);
 
   ctx.textBaseline = 'alphabetic';
 }
@@ -5600,7 +5605,7 @@ function drawGhostTimePopup() {
   // Dismiss hint
   ctx.fillStyle = 'rgba(100, 140, 180, 0.55)';
   ctx.font      = '11px monospace';
-  ctx.fillText('tap anywhere to dismiss', CANVAS_W / 2, py + 196, pw - 20);
+  ctx.fillText(`${tap} anywhere to dismiss`, CANVAS_W / 2, py + 196, pw - 20);
 
   ctx.textBaseline = 'alphabetic';
 }
@@ -5845,7 +5850,7 @@ function drawAuthScreen() {
   ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='13px monospace';
   ctx.fillText('USERNAME',CANVAS_W/2,215);
 
-  const uname=state.authUsername||'tap to enter';
+  const uname=state.authUsername||`${tap} to enter`;
   const isEmpty=!state.authUsername;
   ctx.fillStyle=isEmpty?'rgba(255,255,255,0.25)':'#fff';
   ctx.font=`bold 22px monospace`; ctx.textAlign='center';
@@ -5966,7 +5971,7 @@ function submitAuth(){
         })
         .catch((err)=>{
           console.error('Supabase login error:', err);
-          state.authError='Network error — retry or tap Sign Up';
+          state.authError=`Network error — retry or ${tap} Sign Up`;
           state.authLoading=false;
         });
     }
@@ -6118,7 +6123,7 @@ function drawSplashScreen() {
   ctx.fillStyle    = `rgba(255,255,255,${fadeAlpha})`;
   ctx.font         = '13px monospace';
   ctx.textBaseline = 'middle';
-  ctx.fillText('tap to continue', CANVAS_W / 2, CANVAS_H - 30);
+  ctx.fillText(`${tap} to continue`, CANVAS_W / 2, CANVAS_H - 30);
 
   // Countdown progress bar at very bottom
   const frac = Math.max(0, state.splashTimer / 5.0);
@@ -6248,7 +6253,7 @@ function drawProfileScreen() {
       ctx.fillText('NEW  PILOT', CARD_X + 118, cardY + CARD_H / 2 - 11);
       ctx.fillStyle = 'rgba(135,135,168,0.42)';
       ctx.font      = '11px monospace';
-      ctx.fillText('tap to create a new save slot', CARD_X + 118, cardY + CARD_H / 2 + 12, CANVAS_W - CARD_X - 118 - 12);
+      ctx.fillText(`${tap} to create a new save slot`, CARD_X + 118, cardY + CARD_H / 2 + 12, CANVAS_W - CARD_X - 118 - 12);
 
       profileButtons.push({ action: 'new', idx: i, x: CARD_X + CARD_W / 2, y: cardY + CARD_H / 2, w: CARD_W, h: CARD_H });
     }
