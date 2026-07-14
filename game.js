@@ -2594,6 +2594,17 @@ window.addEventListener('keydown', e => {
   if ((e.key === 'Enter' || e.key === ' ') && state.screen === 'start') {
     beginLaunch();
   }
+  // Escape goes back
+  if (e.key === 'Escape') {
+    if (state.screen === 'shop')        { state.screen = 'start'; state.shopScrollY = 0; }
+    else if (state.screen === 'vip')    { state.screen = 'shop'; state.shopTab = 'packs'; }
+    else if (state.screen === 'wheel')  { state.screen = 'start'; }
+    else if (state.screen === 'leaderboard') { state.screen = 'start'; }
+    else if (state.screen === 'tutorial')    { state.screen = 'start'; }
+    else if (state.screen === 'settings')    { state.screen = 'start'; }
+    else if (state.screen === 'gameover')    { state.screen = 'start'; }
+    else if (state.screen === 'win')         { state.screen = 'start'; }
+  }
 });
 window.addEventListener('keyup', e => { keys[e.key] = false; });
 
