@@ -21,3 +21,12 @@ html, body {
   display: block;
   image-rendering: pixelated;
 }
+
+/* On desktop (mouse/hover device): fill the full viewport, no black bars */
+@media (hover: hover) and (pointer: fine) {
+  #gameCanvas {
+    width: 100vw;
+    height: 100svh;
+    image-rendering: auto;
+  }
+}

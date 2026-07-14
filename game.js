@@ -75,12 +75,25 @@ const isDesktop = window.matchMedia('(hover: hover) and (pointer: fine)').matche
 const TAP = isDesktop ? 'Click' : 'Tap';   // sentence-case
 const tap = isDesktop ? 'click' : 'tap';   // lowercase
 
-// The game always renders at this internal size.
-// CSS scales the canvas element to fit the screen.
-const CANVAS_W = 390;
-const CANVAS_H = 844;
+// On desktop: full viewport. On mobile: portrait strip.
+let CANVAS_W = isDesktop ? window.innerWidth  : 390;
+let CANVAS_H = isDesktop ? window.innerHeight : 844;
 canvas.width  = CANVAS_W;
 canvas.height = CANVAS_H;
+const PORT_W  = 390;   // internal portrait width used for panel screens
+
+// Re-run when the page fully loads or is resized (fixes zero-dimensions at startup)
+function initCanvasForDesktop() {
+  if (!isDesktop) return;
+  CANVAS_W = window.innerWidth;
+  CANVAS_H = window.innerHeight;
+  canvas.width  = CANVAS_W;
+  canvas.height = CANVAS_H;
+  // repositionDesktopButtons is defined later in the file — call it if ready
+  if (typeof repositionDesktopButtons === 'function') repositionDesktopButtons();
+}
+window.addEventListener('load', initCanvasForDesktop);
+window.addEventListener('resize', initCanvasForDesktop);
 
 // ── Settings (persisted) ──────────────────────
 const settings = {
@@ -2618,12 +2631,15 @@ let mousePos = { x: -1, y: -1 };
 
 function isOverButton(x, y) {
   const hit = b => b && Math.abs(x - b.x) < b.w / 2 && Math.abs(y - b.y) < b.h / 2;
+  // Panel screens render in a 390px strip centered on desktop — translate x for those
+  const px = isDesktop ? x - (CANVAS_W - PORT_W) / 2 : x;
+  const panelHit = b => b && Math.abs(px - b.x) < b.w / 2 && Math.abs(y - b.y) < b.h / 2;
   switch (state.screen) {
     case 'start':
       return hit(LAUNCH_BTN) || hit(SETTINGS_BTN) || hit(LEADERBOARD_BTN) ||
              hit(SHOP_BTN) || hit(PROFILE_BTN) || hit(TUTORIAL_BTN) || hit(WHEEL_BTN);
-    case 'shop':      return shopButtons.some(hit);
-    case 'profiles':  return profileButtons.some(hit);
+    case 'shop':    return shopButtons.some(panelHit);
+    case 'profile': return profileButtons.some(panelHit);
     case 'vip':       return hit(VIP_SUBSCRIBE_BTN) || hit(VIP_BACK_BTN);
     case 'gameover':  return hit(REVIVE_BTN) || hit(TRY_AGAIN_BTN) || hit(MAIN_MENU_BTN);
     case 'win':       return hit(WIN_PLAY_BTN) || hit(WIN_MENU_BTN) || hit(NAME_SUBMIT_BTN);
@@ -2638,9 +2654,16 @@ function isOverButton(x, y) {
 }
 
 canvas.addEventListener('mousemove', e => {
-  const rect = canvas.getBoundingClientRect();
-  mousePos.x = (e.clientX - rect.left) * (CANVAS_W / rect.width);
-  mousePos.y = (e.clientY - rect.top)  * (CANVAS_H / rect.height);
+  if (!isDesktop) {
+    // Mobile in browser: use CSS scale mapping
+    const rect = canvas.getBoundingClientRect();
+    mousePos.x = (e.clientX - rect.left) * (CANVAS_W / rect.width);
+    mousePos.y = (e.clientY - rect.top)  * (CANVAS_H / rect.height);
+  } else {
+    // Desktop: canvas element IS the viewport (1:1 pixel mapping)
+    mousePos.x = e.clientX;
+    mousePos.y = e.clientY;
+  }
   canvas.style.cursor = isOverButton(mousePos.x, mousePos.y) ? 'pointer' : 'default';
 });
 
@@ -2716,22 +2739,28 @@ canvas.addEventListener('touchend', e => {
   handleTap(tx, ty);
 }, { passive: false });
 
-// Mouse click (desktop)
+// Mouse click (desktop) — canvas IS the viewport, so client coords == canvas coords
 canvas.addEventListener('click', e => {
-  const rect  = canvas.getBoundingClientRect();
-  const scale = rect.width / CANVAS_W;
-  const cx = (e.clientX - rect.left) / scale;
-  const cy = (e.clientY - rect.top)  / scale;
-  handleTap(cx, cy);
+  if (isDesktop) {
+    handleTap(e.clientX, e.clientY);
+  } else {
+    const rect  = canvas.getBoundingClientRect();
+    const scale = rect.width / CANVAS_W;
+    handleTap((e.clientX - rect.left) / scale, (e.clientY - rect.top) / scale);
+  }
 });
 
 // Mouse wheel (desktop shop scroll)
 canvas.addEventListener('wheel', e => {
   if (state.screen !== 'shop') return;
   e.preventDefault();
-  const rect  = canvas.getBoundingClientRect();
-  const scale = rect.width / CANVAS_W;
-  state.shopScrollY += e.deltaY / scale;
+  if (isDesktop) {
+    state.shopScrollY += e.deltaY;
+  } else {
+    const rect  = canvas.getBoundingClientRect();
+    const scale = rect.width / CANVAS_W;
+    state.shopScrollY += e.deltaY / scale;
+  }
   clampShopScroll();
 }, { passive: false });
 
@@ -2767,8 +2796,9 @@ function handleTap(x, y) {
 
   if (state.screen === 'splash')  { state.screen = state.authUser ? 'start' : 'profile'; return; }
   if (state.screen === 'profile') {
+    const px = isDesktop ? x - (CANVAS_W - PORT_W) / 2 : x;
     for (const btn of profileButtons) {
-      if (Math.abs(x - btn.x) < btn.w / 2 && Math.abs(y - btn.y) < btn.h / 2) {
+      if (Math.abs(px - btn.x) < btn.w / 2 && Math.abs(y - btn.y) < btn.h / 2) {
         if (btn.action === 'select') {
           profileScreen.selectedIdx = btn.idx;
         } else if (btn.action === 'new') {
@@ -2895,8 +2925,9 @@ function handleTap(x, y) {
     if (Math.abs(x - xBtnX) < 16 && Math.abs(y - xBtnY) < 16) state.dailyChallengeHidden = true;
   }
   if (state.screen === 'shop') {
+    const px = isDesktop ? x - (CANVAS_W - PORT_W) / 2 : x;
     for (const btn of shopButtons) {
-      if (Math.abs(x - btn.x) < btn.w / 2 && Math.abs(y - btn.y) < btn.h / 2) {
+      if (Math.abs(px - btn.x) < btn.w / 2 && Math.abs(y - btn.y) < btn.h / 2) {
         if (btn.action === 'back')  { state.screen = 'start'; break; }
         if (btn.action === 'tab') { state.shopTab = btn.id; state.shopScrollY = 0; break; }
         if (btn.action === 'equip') {
@@ -3083,17 +3114,18 @@ function handleTap(x, y) {
 }
 
 // ── Button helpers ────────────────────────────
-const SETTINGS_BTN    = { x: CANVAS_W - 44, y: 44,  w: 52,  h: 52  };  // gear icon, top-right
-const LEADERBOARD_BTN = { x: CANVAS_W - 44, y: CANVAS_H - 44, w: 52, h: 52 };  // trophy, bottom-right
-const SHOP_BTN        = { x: CANVAS_W - 44 - 58, y: 44, w: 52, h: 52 };  // shop, left of gear
-const PROFILE_BTN     = { x: 44,             y: CANVAS_H - 44, w: 52, h: 52 };  // profile, bottom-left
-const TUTORIAL_BTN    = { x: CANVAS_W / 2,  y: CANVAS_H - 44, w: 52, h: 52 };  // how-to-play, bottom-center
-const WHEEL_BTN       = { x: CANVAS_W/2, y: 210, w: CANVAS_W-40, h: 54 };  // daily spin banner
-const SETTINGS_BACK   = { x: CANVAS_W / 2,  y: 748, w: 250, h: 58  };  // back to menu
-const LEADERBOARD_BACK = { x: CANVAS_W / 2, y: 748, w: 250, h: 58  };  // back to menu
-const TUTORIAL_BACK   = { x: CANVAS_W / 2,  y: 748, w: 250, h: 58  };  // back to menu
-const SOUND_TOGGLE    = { x: CANVAS_W / 2,  y: 380, w: 280, h: 70  };  // toggle row
-const LAUNCH_BTN      = { x: CANVAS_W / 2, y: 748, w: 250, h: 58 };
+let SETTINGS_BTN    = { x: CANVAS_W - 44, y: 44,  w: 52,  h: 52  };
+let LEADERBOARD_BTN = { x: CANVAS_W - 44, y: CANVAS_H - 44, w: 52, h: 52 };
+let SHOP_BTN        = { x: CANVAS_W - 44 - 58, y: 44, w: 52, h: 52 };
+let PROFILE_BTN     = { x: 44,             y: CANVAS_H - 44, w: 52, h: 52 };
+let TUTORIAL_BTN    = { x: CANVAS_W / 2,  y: CANVAS_H - 44, w: 52, h: 52 };
+let WHEEL_BTN       = { x: CANVAS_W/2, y: 210, w: CANVAS_W-40, h: 54 };
+// Panel-screen back buttons: x = CANVAS_W/2 so hit-detection works in screen coords on both mobile and desktop
+const SETTINGS_BACK    = { x: CANVAS_W / 2, y: 748, w: 250, h: 58 };
+const LEADERBOARD_BACK = { x: CANVAS_W / 2, y: 748, w: 250, h: 58 };
+const TUTORIAL_BACK    = { x: CANVAS_W / 2, y: 748, w: 250, h: 58 };
+const SOUND_TOGGLE     = { x: CANVAS_W / 2, y: 380, w: 280, h: 70 };
+let LAUNCH_BTN      = { x: CANVAS_W / 2, y: 748, w: 250, h: 58 };
 const REVIVE_BTN      = { x: CANVAS_W / 2, y: 552, w: 270, h: 62 };
 const TRY_AGAIN_BTN   = { x: CANVAS_W / 2, y: 636, w: 250, h: 58 };
 const MAIN_MENU_BTN   = { x: CANVAS_W / 2, y: 716, w: 250, h: 58 };
@@ -3102,7 +3134,36 @@ const NAME_SUBMIT_BTN   = { x: CANVAS_W / 2, y: 530, w: 220, h: 54 };
 const WIN_MENU_BTN      = { x: CANVAS_W / 2, y: 792, w: 250, h: 58 };
 const VIP_SUBSCRIBE_BTN = { x: CANVAS_W / 2, y: 572, w: 300, h: 62 };
 const VIP_BACK_BTN      = { x: CANVAS_W / 2, y: 660, w: 220, h: 52 };
-const EXIT_BTN        = { x: 36,            y: CANVAS_H - 28, w: 60, h: 40 };  // bottom-left, discrete
+let EXIT_BTN        = { x: 36, y: CANVAS_H - 28, w: 60, h: 40 };
+
+// ── Desktop: reposition buttons for landscape layout ──────────────
+function repositionDesktopButtons() {
+  if (!isDesktop) return;
+  const RPC = CANVAS_W - 160;
+  const by  = (i) => 150 + i * 72;
+  SHOP_BTN        = { x: RPC, y: by(0), w: 280, h: 56 };
+  LEADERBOARD_BTN = { x: RPC, y: by(1), w: 280, h: 56 };
+  SETTINGS_BTN    = { x: RPC, y: by(2), w: 280, h: 56 };
+  TUTORIAL_BTN    = { x: RPC, y: by(3), w: 280, h: 56 };
+  WHEEL_BTN       = { x: RPC, y: by(4), w: 280, h: 68 };
+  LAUNCH_BTN      = { x: CANVAS_W / 2, y: CANVAS_H - 82, w: 320, h: 66 };
+  PROFILE_BTN     = { x: 160, y: CANVAS_H - 82, w: 260, h: 54 };
+  EXIT_BTN        = { x: 110, y: CANVAS_H - 48, w: 180, h: 44 };
+  // Mutate x on const buttons (objects are mutable) so they track canvas center
+  SETTINGS_BACK.x     = CANVAS_W / 2;
+  LEADERBOARD_BACK.x  = CANVAS_W / 2;
+  TUTORIAL_BACK.x     = CANVAS_W / 2;
+  SOUND_TOGGLE.x      = CANVAS_W / 2;
+  REVIVE_BTN.x        = CANVAS_W / 2;
+  TRY_AGAIN_BTN.x     = CANVAS_W / 2;
+  MAIN_MENU_BTN.x     = CANVAS_W / 2;
+  WIN_PLAY_BTN.x      = CANVAS_W / 2;
+  NAME_SUBMIT_BTN.x   = CANVAS_W / 2;
+  WIN_MENU_BTN.x      = CANVAS_W / 2;
+  VIP_SUBSCRIBE_BTN.x = CANVAS_W / 2;
+  VIP_BACK_BTN.x      = CANVAS_W / 2;
+}
+if (isDesktop) repositionDesktopButtons();
 
 function hitButton(btn, px, py) {
   return Math.abs(px - btn.x) < btn.w / 2 && Math.abs(py - btn.y) < btn.h / 2;
@@ -3115,6 +3176,43 @@ function beginLaunch() {
   launchAnim.t = 0;
   state.screen  = 'launching';
   sfxLaunchRumble();
+}
+
+// ── Portrait panel wrapper (desktop only) ────────────────────────────
+// Draws the given screen in a centered 390px strip with a star background
+// behind it. All screen-coord buttons (CANVAS_W/2) align to the panel
+// center because the panel IS centered at CANVAS_W/2.
+function withPortraitPanel(fn) {
+  if (!isDesktop) { fn(); return; }
+
+  const PW = PORT_W;
+  const PX = (CANVAS_W - PW) / 2;
+
+  // Full-canvas dark background
+  ctx.fillStyle = 'rgb(2,0,8)';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  for (const s of starsFar) {
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(200,210,255,${s.alpha * 0.5})`; ctx.fill();
+  }
+
+  // Subtle panel edge glow
+  ctx.strokeStyle = 'rgba(100,80,220,0.35)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(PX, 0); ctx.lineTo(PX, CANVAS_H);
+  ctx.moveTo(PX + PW, 0); ctx.lineTo(PX + PW, CANVAS_H);
+  ctx.stroke();
+
+  // Clip to panel, translate, and temporarily narrow CANVAS_W
+  ctx.save();
+  ctx.beginPath(); ctx.rect(PX, 0, PW, CANVAS_H); ctx.clip();
+  ctx.translate(PX, 0);
+  const savedW = CANVAS_W;
+  CANVAS_W = PW;
+  fn();
+  CANVAS_W = savedW;
+  ctx.restore();
 }
 
 // ── Start / reset (called when anim finishes) ─
@@ -3849,7 +3947,7 @@ function draw() {
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
   if (state.screen === 'auth') {
-    drawAuthScreen();
+    withPortraitPanel(() => drawAuthScreen());
     return;
   }
 
@@ -3859,12 +3957,16 @@ function draw() {
   }
 
   if (state.screen === 'profile') {
-    drawProfileScreen();
+    withPortraitPanel(() => drawProfileScreen());
     return;
   }
 
   if (state.screen === 'start') {
-    drawStartScreen();
+    if (isDesktop) {
+      drawStartScreenDesktop();
+    } else {
+      drawStartScreen();
+    }
     if (state.signinPrompt) drawSignInPrompt();
     if (state.ghostTimeVisible) drawGhostTimePopup();
     if (state.eggFlash > 0) drawEggFlash();
@@ -3872,43 +3974,16 @@ function draw() {
     return;
   }
 
-  if (state.screen === 'wheel') {
-    drawWheelScreen();
-    return;
-  }
-
-  if (state.screen === 'settings') {
-    drawSettingsScreen();
-    return;
-  }
-
-  if (state.screen === 'leaderboard') {
-    drawLeaderboardScreen();
-    return;
-  }
-
-  if (state.screen === 'tutorial') {
-    drawTutorialScreen();
-    return;
-  }
-
-  if (state.screen === 'shop') {
-    drawShopScreen();
-    return;
-  }
-
-  if (state.screen === 'vip') {
-    drawVipScreen();
-    return;
-  }
+  if (state.screen === 'wheel')       { withPortraitPanel(() => drawWheelScreen());       return; }
+  if (state.screen === 'settings')    { withPortraitPanel(() => drawSettingsScreen());    return; }
+  if (state.screen === 'leaderboard') { withPortraitPanel(() => drawLeaderboardScreen()); return; }
+  if (state.screen === 'tutorial')    { withPortraitPanel(() => drawTutorialScreen());    return; }
+  if (state.screen === 'shop')        { withPortraitPanel(() => drawShopScreen());        return; }
+  if (state.screen === 'vip')         { withPortraitPanel(() => drawVipScreen());         return; }
+  if (state.screen === 'nameentry')   { withPortraitPanel(() => drawNameEntryScreen());   return; }
 
   if (state.screen === 'launching') {
     drawLaunchAnim();
-    return;
-  }
-
-  if (state.screen === 'nameentry') {
-    drawNameEntryScreen();
     return;
   }
 
@@ -4043,16 +4118,17 @@ function draw() {
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
   }
 
-  // ── HUD (always on top) ───────────────────────
-  drawHUD();
-  drawArrowButtons();
-  if (state.rageMode) drawRageBar();
-
-  // ── Altitude progress bar (right edge) ────────
-  drawAltitudeBar();
-
-  // ── Discrete exit button (bottom-left) ────────
-  drawExitBtn();
+  // ── HUD / gameplay overlay ────────────────────
+  if (isDesktop) {
+    drawDesktopGameHUD();
+    if (state.rageMode) drawRageBar();
+  } else {
+    drawHUD();
+    drawArrowButtons();
+    if (state.rageMode) drawRageBar();
+    drawAltitudeBar();
+    drawExitBtn();
+  }
 
   // ── Game over overlay ─────────────────────────
   if (state.screen === 'gameover') drawGameOverScreen();
@@ -5807,7 +5883,6 @@ const AUTH_NUMPAD = [
   ['←','0','✓']
 ];
 const AUTH_BTN_W = 88, AUTH_BTN_H = 64, AUTH_BTN_GAP = 10;
-const AUTH_PAD_X = (CANVAS_W - (3*AUTH_BTN_W + 2*AUTH_BTN_GAP)) / 2;
 const AUTH_PAD_Y = 430;
 
 function drawAuthScreen() {
@@ -5884,6 +5959,7 @@ function drawAuthScreen() {
   }
 
   // Numpad
+  const AUTH_PAD_X = (CANVAS_W - (3*AUTH_BTN_W + 2*AUTH_BTN_GAP)) / 2;
   AUTH_NUMPAD.forEach((row,ri)=>{
     row.forEach((key,ci)=>{
       const bx=AUTH_PAD_X+ci*(AUTH_BTN_W+AUTH_BTN_GAP);
@@ -5910,6 +5986,7 @@ function drawAuthScreen() {
 }
 
 function authNumpadHit(x,y){
+  const AUTH_PAD_X = (CANVAS_W - (3*AUTH_BTN_W + 2*AUTH_BTN_GAP)) / 2;
   for(let ri=0;ri<AUTH_NUMPAD.length;ri++){
     for(let ci=0;ci<AUTH_NUMPAD[ri].length;ci++){
       const bx=AUTH_PAD_X+ci*(AUTH_BTN_W+AUTH_BTN_GAP);
@@ -6317,6 +6394,268 @@ function drawProfileScreen() {
   }
 }
 
+// ── Desktop landscape start screen ──────────────────────────────────
+function drawStartScreenDesktop() {
+  drawDayScene(0);
+
+  const LW  = 320;              // left panel width
+  const RW  = 320;              // right panel width
+  const CX  = CANVAS_W / 2;    // center x
+  const CY  = CANVAS_H / 2;    // center y
+
+  // ── Glass side panels ──────────────────────────
+  const panelAlpha = 'rgba(0,0,14,0.72)';
+  ctx.fillStyle = panelAlpha;
+  ctx.fillRect(0, 0, LW, CANVAS_H);
+  ctx.fillRect(CANVAS_W - RW, 0, RW, CANVAS_H);
+
+  // Panel edge lines
+  ctx.strokeStyle = 'rgba(120,100,255,0.22)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(LW, 0); ctx.lineTo(LW, CANVAS_H);
+  ctx.moveTo(CANVAS_W - RW, 0); ctx.lineTo(CANVAS_W - RW, CANVAS_H);
+  ctx.stroke();
+
+  // ── LEFT PANEL: title + coins + profile + daily spin ──
+  const LCX = LW / 2;
+
+  // JTJ title
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffe090';
+  ctx.font = 'bold 22px monospace';
+  ctx.fillText('JOURNEY TO', LCX, 70);
+  ctx.fillStyle = '#ff9030';
+  ctx.font = 'bold 48px monospace';
+  ctx.fillText('JUPITER', LCX, 116);
+
+  // Divider
+  ctx.strokeStyle = 'rgba(255,180,60,0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(20, 148); ctx.lineTo(LW - 20, 148); ctx.stroke();
+
+  // Coin balance
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 26px monospace';
+  ctx.fillText(`🪙  ${state.coins}`, LCX, 182);
+
+  // Profile name
+  const profileName = (() => {
+    const profiles = loadProfiles();
+    const idx = getActiveProfileIdx();
+    return profiles[idx]?.name || (state.authUser?.isGuest ? 'GUEST' : (state.authUsername || ''));
+  })();
+  if (profileName) {
+    ctx.fillStyle = '#aaaacc';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText('PILOT', LCX, 218);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 17px monospace';
+    ctx.fillText(profileName.toUpperCase(), LCX, 240, LW - 32);
+  }
+
+  // Daily Spin button (left panel)
+  {
+    const ready = canSpinToday();
+    const bx = 20, by = 272, bw = LW - 40, bh = 62;
+    const pulse = 0.55 + 0.45 * Math.sin(gameTime * 3.8);
+    if (ready) { ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 12 * pulse; }
+    ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 12);
+    ctx.fillStyle = ready
+      ? `hsla(${(gameTime * 40) % 360},80%,22%,0.95)`
+      : 'rgba(20,20,30,0.85)';
+    ctx.fill();
+    ctx.strokeStyle = ready ? `hsla(${(gameTime * 60) % 360},100%,65%,0.9)` : 'rgba(80,80,100,0.4)';
+    ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.font = '20px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText('🎡', bx + 12, by + bh / 2);
+    ctx.font = 'bold 13px monospace'; ctx.fillStyle = ready ? '#ffffff' : '#666688';
+    ctx.fillText('DAILY SPIN', bx + 40, by + bh / 2 - 9, bw - 52);
+    ctx.font = 'bold 10px monospace'; ctx.fillStyle = ready ? '#aaffaa' : '#aa8888';
+    ctx.fillText(ready ? 'Spin available!' : 'Come back tomorrow', bx + 40, by + bh / 2 + 10, bw - 52);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  }
+
+  // Daily challenge card
+  const dc = state.dailyChallenge;
+  if (dc && !state.dailyChallengeHidden) {
+    const bx = 20, by = 352, bw = LW - 40, bh = 60;
+    ctx.fillStyle = dc.completed ? 'rgba(0,40,10,0.88)' : 'rgba(10,10,35,0.88)';
+    ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 10); ctx.fill();
+    ctx.strokeStyle = dc.completed ? '#44dd66' : 'rgba(100,120,255,0.7)';
+    ctx.lineWidth = 1.5; ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 10); ctx.stroke();
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 9px monospace'; ctx.fillStyle = dc.completed ? '#44ff88' : '#8899ff';
+    ctx.textAlign = 'left'; ctx.fillText('DAILY CHALLENGE', bx + 10, by + 14);
+    ctx.font = 'bold 10px monospace'; ctx.fillStyle = '#ffd700';
+    ctx.textAlign = 'right'; ctx.fillText(dc.completed ? 'DONE!' : `+${dc.reward} coins`, bx + bw - 10, by + 14);
+    ctx.font = 'bold 12px monospace'; ctx.fillStyle = dc.completed ? '#aaffcc' : '#ffffff';
+    ctx.textAlign = 'left'; ctx.fillText(dc.desc, bx + 10, by + 36, bw - 20);
+    ctx.textAlign = 'center';
+  }
+
+  // Profile button (bottom-left)
+  {
+    const btn = PROFILE_BTN;
+    ctx.fillStyle = 'rgba(20,20,40,0.85)';
+    ctx.beginPath(); ctx.roundRect(btn.x - btn.w / 2, btn.y - btn.h / 2, btn.w, btn.h, 10); ctx.fill();
+    ctx.strokeStyle = 'rgba(160,140,255,0.45)';
+    ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = '#ccccee'; ctx.font = 'bold 14px monospace';
+    ctx.fillText('🚀  PROFILE', btn.x, btn.y, btn.w - 20);
+  }
+
+  // ── RIGHT PANEL: navigation buttons ───────────
+  const RCX = CANVAS_W - RW / 2;
+
+  function drawRightBtn(btn, emoji, label, color) {
+    const pulse = 0.7 + 0.3 * Math.sin(gameTime * 2);
+    ctx.fillStyle = 'rgba(12,12,32,0.88)';
+    ctx.beginPath(); ctx.roundRect(btn.x - btn.w / 2, btn.y - btn.h / 2, btn.w, btn.h, 12); ctx.fill();
+    ctx.strokeStyle = color + '66';
+    ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = color; ctx.font = 'bold 15px monospace';
+    ctx.fillText(`${emoji}  ${label}`, RCX, btn.y, btn.w - 20);
+  }
+
+  drawRightBtn(SHOP_BTN,        '🛒', 'SHOP',        '#88ccff');
+  drawRightBtn(LEADERBOARD_BTN, '🏆', 'LEADERBOARD', '#ffd700');
+  drawRightBtn(SETTINGS_BTN,    '⚙',  'SETTINGS',    '#aaaacc');
+  drawRightBtn(TUTORIAL_BTN,    '?',  'HOW TO PLAY', '#88ffcc');
+
+  // Daily spin in right panel
+  {
+    const btn = WHEEL_BTN;
+    const ready = canSpinToday();
+    const pulse = 0.6 + 0.4 * Math.sin(gameTime * 3.8);
+    if (ready) { ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 10 * pulse; }
+    ctx.fillStyle = ready ? `hsla(${(gameTime*40)%360},70%,18%,0.95)` : 'rgba(15,15,30,0.85)';
+    ctx.beginPath(); ctx.roundRect(btn.x - btn.w / 2, btn.y - btn.h / 2, btn.w, btn.h, 12); ctx.fill();
+    ctx.strokeStyle = ready ? `hsla(${(gameTime*60)%360},100%,65%,0.9)` : 'rgba(80,80,100,0.4)';
+    ctx.lineWidth = 1.5; ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.fillStyle = ready ? '#ffffff' : '#555577'; ctx.font = 'bold 15px monospace';
+    ctx.fillText(`🎡  DAILY SPIN  ${ready ? '✦' : ''}`, RCX, btn.y, btn.w - 20);
+  }
+
+  // ── CENTER: rocket on launchpad + LAUNCH button ──
+  const rocketCY = CANVAS_H * 0.72;
+  drawRocket(CX, rocketCY - 37);
+
+  // LAUNCH ROCKET button
+  {
+    const btn = LAUNCH_BTN;
+    const pulse = 0.65 + 0.35 * Math.sin(gameTime * 3.2);
+    ctx.shadowColor = '#ff6020'; ctx.shadowBlur = 18 * pulse;
+    ctx.beginPath(); ctx.roundRect(btn.x - btn.w / 2, btn.y - btn.h / 2, btn.w, btn.h, btn.h / 2);
+    const g = ctx.createLinearGradient(btn.x - btn.w / 2, btn.y, btn.x + btn.w / 2, btn.y);
+    g.addColorStop(0, '#b83200'); g.addColorStop(0.5, '#ff5c18'); g.addColorStop(1, '#b83200');
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = '#ffaa50'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 22px monospace';
+    ctx.fillText('LAUNCH ROCKET', CX, btn.y);
+  }
+
+  ctx.textBaseline = 'alphabetic';
+}
+
+// ── Desktop gameplay side panels ────────────────────────────────────
+function drawDesktopGameHUD() {
+  const PW  = 220;                // panel width
+  const RX  = CANVAS_W - PW;     // right panel left edge
+  const LCX = PW / 2;            // left panel center x
+  const RCX = RX + PW / 2;       // right panel center x
+
+  // Glass panels
+  ctx.fillStyle = 'rgba(0,0,14,0.68)';
+  ctx.fillRect(0, 0, PW, CANVAS_H);
+  ctx.fillRect(RX, 0, PW, CANVAS_H);
+  ctx.strokeStyle = 'rgba(100,80,220,0.22)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(PW, 0); ctx.lineTo(PW, CANVAS_H);
+  ctx.moveTo(RX, 0); ctx.lineTo(RX, CANVAS_H);
+  ctx.stroke();
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+  // ── LEFT: zone / score / level / altitude ──────
+  const zoneColors = ['#3a8fff','#44ffaa','#ff8844','#ff2244'];
+  const zoneNames  = ['ZONE 1','ZONE 2','ZONE 3','ZONE 4'];
+  ctx.fillStyle = '#888899'; ctx.font = 'bold 10px monospace';
+  ctx.fillText('ZONE', LCX, 52);
+  ctx.fillStyle = zoneColors[(state.backgroundZone - 1) % 4];
+  ctx.font = 'bold 24px monospace';
+  ctx.fillText(zoneNames[(state.backgroundZone - 1) % 4], LCX, 76);
+
+  ctx.fillStyle = '#888899'; ctx.font = 'bold 10px monospace';
+  ctx.fillText('SCORE', LCX, 112);
+  ctx.fillStyle = '#ffaa50'; ctx.font = 'bold 22px monospace';
+  ctx.fillText(state.score, LCX, 136);
+
+  ctx.fillStyle = '#888899'; ctx.font = 'bold 10px monospace';
+  ctx.fillText('LEVEL', LCX, 168);
+  ctx.fillStyle = '#7ad6c8'; ctx.font = 'bold 22px monospace';
+  ctx.fillText(state.level, LCX, 192);
+
+  // Altitude bar
+  const barX = LCX, barY = 224, barH = CANVAS_H - 310, barW = 8;
+  const frac = Math.min(state.score / WIN_SCORE, 1);
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.beginPath(); ctx.roundRect(barX - barW/2, barY, barW, barH, 4); ctx.fill();
+  if (frac > 0) {
+    const fillH = barH * frac;
+    const g = ctx.createLinearGradient(0, barY + barH, 0, barY + barH - fillH);
+    g.addColorStop(0,'#3a8fff'); g.addColorStop(0.5,'#a040ff'); g.addColorStop(1,'#ff8800');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.roundRect(barX - barW/2, barY + barH - fillH, barW, fillH, 4); ctx.fill();
+  }
+  drawJupiterIcon(barX, barY - 14, 11);
+
+  // Exit button
+  {
+    const btn = EXIT_BTN;
+    ctx.fillStyle = 'rgba(200,40,40,0.18)';
+    ctx.beginPath(); ctx.roundRect(btn.x - btn.w/2, btn.y - btn.h/2, btn.w, btn.h, 8); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,80,80,0.4)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = '#ff7070'; ctx.font = 'bold 13px monospace';
+    ctx.fillText('✕  EXIT', btn.x, btn.y);
+  }
+
+  // ── RIGHT: coins / lives / timer / powerups ────
+  ctx.fillStyle = '#888899'; ctx.font = 'bold 10px monospace';
+  ctx.fillText('COINS', RCX, 52);
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 22px monospace';
+  ctx.fillText(`🪙 ${state.coins}`, RCX, 76);
+
+  ctx.fillStyle = '#888899'; ctx.font = 'bold 10px monospace';
+  ctx.fillText('LIVES', RCX, 112);
+  const hearts = '♥'.repeat(state.lives) + '○'.repeat(3 - state.lives);
+  ctx.fillStyle = '#ff5577'; ctx.font = 'bold 18px monospace';
+  ctx.fillText(hearts, RCX, 136);
+
+  ctx.fillStyle = '#888899'; ctx.font = 'bold 10px monospace';
+  ctx.fillText('TIME', RCX, 168);
+  ctx.fillStyle = '#c8a0ff'; ctx.font = 'bold 20px monospace';
+  ctx.fillText(formatTime(state.elapsedTime), RCX, 192);
+
+  // Active power-ups
+  let py = 228;
+  if (state.shield)        { ctx.fillStyle='#44aaff'; ctx.font='bold 12px monospace'; ctx.fillText('🛡 SHIELD',  RCX, py); py += 28; }
+  if (state.boostTimer>0)  { ctx.fillStyle='#ffaa00'; ctx.font='bold 12px monospace'; ctx.fillText(`⚡ ${Math.ceil(state.boostTimer)}s`, RCX, py); py += 28; }
+  if (state.magnetTimer>0) { ctx.fillStyle='#ff44ff'; ctx.font='bold 12px monospace'; ctx.fillText(`🧲 ${Math.ceil(state.magnetTimer)}s`, RCX, py); py += 28; }
+  if (state.coinMultiplier>1 && state.coinMultiplierTimer>0) { ctx.fillStyle='#ffd700'; ctx.font='bold 12px monospace'; ctx.fillText(`×2 COINS ${Math.ceil(state.coinMultiplierTimer)}s`, RCX, py); py += 28; }
+
+  // Arrow key hint
+  ctx.fillStyle = 'rgba(255,255,255,0.22)';
+  ctx.font = '11px monospace';
+  ctx.fillText('← → arrow keys', RCX, CANVAS_H - 66);
+  ctx.fillText('to steer', RCX, CANVAS_H - 50);
+
+  ctx.textBaseline = 'alphabetic';
+}
+
 function drawStartScreen() {
   drawDayScene(0);
 
@@ -6592,12 +6931,25 @@ function drawDayScene(yOffset) {
   ctx.fillStyle = sunDisk;
   ctx.fill();
 
-  // Clouds
-  drawCloud(70,  220, 0.88);
-  drawCloud(255, 270, 0.72);
-  drawCloud(155, 340, 0.80);
-  drawCloud(330, 355, 0.60);
-  drawCloud(30,  390, 0.50);
+  // Clouds — more spread out on desktop
+  const cW = CANVAS_W;
+  drawCloud(cW * 0.18, 220, 0.88);
+  drawCloud(cW * 0.40, 270, 0.72);
+  drawCloud(cW * 0.62, 250, 0.78);
+  drawCloud(cW * 0.82, 310, 0.65);
+  if (isDesktop) {
+    drawCloud(cW * 0.06, 300, 0.55);
+    drawCloud(cW * 0.52, 340, 0.60);
+    drawCloud(cW * 0.72, 200, 0.70);
+    drawCloud(cW * 0.93, 260, 0.58);
+  } else {
+    drawCloud(cW * 0.08, 390, 0.50);
+  }
+
+  // Mountains — scaled horizontally to fill CANVAS_W
+  const mSc = CANVAS_W / 390;
+  ctx.save();
+  ctx.scale(mSc, 1);
 
   // Far mountains
   ctx.beginPath();
@@ -6637,6 +6989,8 @@ function drawDayScene(yOffset) {
   ctx.closePath();
   ctx.fillStyle = '#2a5c1e';
   ctx.fill();
+
+  ctx.restore();
 
   // Ground
   const groundGrad = ctx.createLinearGradient(0, 648, 0, CANVAS_H);
