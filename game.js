@@ -2608,6 +2608,39 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { keys[e.key] = false; });
 
+// ── Mouse cursor ──────────────────────────────
+let mousePos = { x: -1, y: -1 };
+
+function isOverButton(x, y) {
+  const hit = b => b && Math.abs(x - b.x) < b.w / 2 && Math.abs(y - b.y) < b.h / 2;
+  switch (state.screen) {
+    case 'start':
+      return hit(LAUNCH_BTN) || hit(SETTINGS_BTN) || hit(LEADERBOARD_BTN) ||
+             hit(SHOP_BTN) || hit(PROFILE_BTN) || hit(TUTORIAL_BTN) || hit(WHEEL_BTN);
+    case 'shop':      return shopButtons.some(hit);
+    case 'profiles':  return profileButtons.some(hit);
+    case 'vip':       return hit(VIP_SUBSCRIBE_BTN) || hit(VIP_BACK_BTN);
+    case 'gameover':  return hit(REVIVE_BTN) || hit(TRY_AGAIN_BTN) || hit(MAIN_MENU_BTN);
+    case 'win':       return hit(WIN_PLAY_BTN) || hit(WIN_MENU_BTN) || hit(NAME_SUBMIT_BTN);
+    case 'settings':  return hit(SETTINGS_BACK);
+    case 'leaderboard': return hit(LEADERBOARD_BACK);
+    case 'tutorial':  return hit(TUTORIAL_BACK);
+    case 'wheel':
+      return (!state.wheelSpinning && !state.wheelShowResult && y > CANVAS_H - 134 && y < CANVAS_H - 86) ||
+             (!state.wheelShowResult && y > CANVAS_H - 66 && y < CANVAS_H - 22);
+    default: return false;
+  }
+}
+
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  mousePos.x = (e.clientX - rect.left) * (CANVAS_W / rect.width);
+  mousePos.y = (e.clientY - rect.top)  * (CANVAS_H / rect.height);
+  canvas.style.cursor = isOverButton(mousePos.x, mousePos.y) ? 'pointer' : 'default';
+});
+
+canvas.addEventListener('mouseleave', () => { canvas.style.cursor = 'default'; });
+
 // Movement tuning
 const ROCKET_ACCEL = 1400;  // how fast the rocket speeds up (pixels per second²)
 const ROCKET_MAX   = 420;   // top speed (pixels per second)
