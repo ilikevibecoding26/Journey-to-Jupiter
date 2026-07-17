@@ -2775,24 +2775,33 @@ canvas.addEventListener('wheel', e => {
 function handleTap(x, y) {
   // ── Auth screen taps ──
   if (state.screen === 'auth') {
-    // Mode toggle
+    if (isLandscape) {
+      const g = authLandscapeGeom();
+      if (Math.abs(y - g.toggleY) < 22) {
+        if (x < g.cx) { state.authMode='login'; state.authPin=''; state.authError=''; }
+        else           { state.authMode='signup'; state.authPin=''; state.authError=''; }
+        return;
+      }
+      if (y > g.userY - 35 && y < g.userY + 18) { showAuthInput(); state.authError=''; return; }
+      const gy = g.guestY;
+      if (y >= gy && y <= gy+44 && Math.abs(x-g.cx) < 115) { playAsGuest(); return; }
+      const key = authNumpadHit(x, y, g.padX, g.padY, g.btnH, g.btnGap);
+      if (key) {
+        if (key==='←') { state.authPin=state.authPin.slice(0,-1); state.authError=''; }
+        else if (key==='✓') { submitAuth(); }
+        else if (state.authPin.length<4) { state.authPin+=key; state.authError=''; }
+      }
+      return;
+    }
+    // Portrait auth
     if (Math.abs(y-155)<22) {
       if (x < CANVAS_W/2) { state.authMode='login'; state.authPin=''; state.authError=''; }
       else                 { state.authMode='signup'; state.authPin=''; state.authError=''; }
       return;
     }
-    // Username tap — show input
-    if (y>220 && y<265) {
-      showAuthInput();
-      state.authError='';
-      return;
-    }
-    // Play as Guest
+    if (y>220 && y<265) { showAuthInput(); state.authError=''; return; }
     const guestY = AUTH_PAD_Y + 4*(AUTH_BTN_H+AUTH_BTN_GAP) + 12;
-    if (y >= guestY && y <= guestY+44 && Math.abs(x-CANVAS_W/2) < 115) {
-      playAsGuest(); return;
-    }
-    // Numpad
+    if (y >= guestY && y <= guestY+44 && Math.abs(x-CANVAS_W/2) < 115) { playAsGuest(); return; }
     const key = authNumpadHit(x,y);
     if (key) {
       if (key==='←') { state.authPin=state.authPin.slice(0,-1); state.authError=''; }
@@ -3955,7 +3964,8 @@ function draw() {
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
   if (state.screen === 'auth') {
-    withPortraitPanel(() => drawAuthScreen());
+    if (isLandscape) drawAuthScreenLandscape();
+    else             drawAuthScreen();
     return;
   }
 
@@ -5993,16 +6003,162 @@ function drawAuthScreen() {
   ctx.fillText('▶  PLAY AS GUEST', CANVAS_W/2, guestY+guestH/2+5);
 }
 
-function authNumpadHit(x,y){
-  const AUTH_PAD_X = (CANVAS_W - (3*AUTH_BTN_W + 2*AUTH_BTN_GAP)) / 2;
+function authNumpadHit(x, y, padX, padY, btnH, btnGap) {
+  padX   = padX   ?? (CANVAS_W - (3*AUTH_BTN_W + 2*AUTH_BTN_GAP)) / 2;
+  padY   = padY   ?? AUTH_PAD_Y;
+  btnH   = btnH   ?? AUTH_BTN_H;
+  btnGap = btnGap ?? AUTH_BTN_GAP;
   for(let ri=0;ri<AUTH_NUMPAD.length;ri++){
     for(let ci=0;ci<AUTH_NUMPAD[ri].length;ci++){
-      const bx=AUTH_PAD_X+ci*(AUTH_BTN_W+AUTH_BTN_GAP);
-      const by=AUTH_PAD_Y+ri*(AUTH_BTN_H+AUTH_BTN_GAP);
-      if(x>=bx&&x<=bx+AUTH_BTN_W&&y>=by&&y<=by+AUTH_BTN_H) return AUTH_NUMPAD[ri][ci];
+      const bx=padX+ci*(AUTH_BTN_W+btnGap);
+      const by=padY+ri*(btnH+btnGap);
+      if(x>=bx&&x<=bx+AUTH_BTN_W&&y>=by&&y<=by+btnH) return AUTH_NUMPAD[ri][ci];
     }
   }
   return null;
+}
+
+// ── Landscape auth geometry (shared between draw and hit-test) ─────
+function authLandscapeGeom() {
+  const cx     = CANVAS_W * 0.725;          // form center x (right panel)
+  const btnH   = 54, btnGap = 8;            // compact numpad for landscape
+  const padW   = 3*AUTH_BTN_W + 2*btnGap;
+  const padX   = cx - padW / 2;
+  const padY   = CANVAS_H * 0.54;
+  const guestY = padY + 4*(btnH+btnGap) - btnGap + 18;
+  return {
+    cx, padX, padY, btnH, btnGap, guestY,
+    toggleY:  CANVAS_H * 0.10,
+    userY:    CANVAS_H * 0.32,
+    pinY:     CANVAS_H * 0.49,
+    divX:     CANVAS_W * 0.45,
+  };
+}
+
+function drawAuthScreenLandscape() {
+  const g = authLandscapeGeom();
+
+  // Full dark background + stars
+  ctx.fillStyle = '#000014';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  for (let i = 0; i < 100; i++) {
+    const sx = Math.sin(i*127.1)*CANVAS_W*0.5 + CANVAS_W*0.5;
+    const sy = Math.sin(i*311.7)*CANVAS_H*0.5 + CANVAS_H*0.5;
+    const sa = 0.2 + Math.abs(Math.sin(i*0.7 + gameTime*0.5))*0.5;
+    ctx.fillStyle = `rgba(255,255,255,${sa})`;
+    ctx.beginPath(); ctx.arc(sx, sy, 0.9, 0, Math.PI*2); ctx.fill();
+  }
+
+  // ── Left panel: branding ──────────────────────
+  const lcx = CANVAS_W * 0.225;
+
+  const lGrad = ctx.createLinearGradient(0, 0, g.divX, 0);
+  lGrad.addColorStop(0, 'rgba(30,0,80,0.45)');
+  lGrad.addColorStop(1, 'rgba(10,0,40,0.0)');
+  ctx.fillStyle = lGrad; ctx.fillRect(0, 0, g.divX, CANVAS_H);
+
+  // Title
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  ctx.font = `bold ${Math.round(CANVAS_H*0.055)}px monospace`;
+  ctx.fillText('JOURNEY TO', lcx, CANVAS_H * 0.32);
+  ctx.fillStyle = '#ffd700';
+  ctx.font = `bold ${Math.round(CANVAS_H*0.13)}px monospace`;
+  ctx.fillText('JUPITER', lcx, CANVAS_H * 0.50);
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.font = `${Math.round(CANVAS_H*0.030)}px monospace`;
+  ctx.fillText('FLY THROUGH THE COSMOS', lcx, CANVAS_H * 0.62);
+
+  // Jupiter planet in lower-left
+  const pr = CANVAS_H * 0.11, px = lcx, py = CANVAS_H * 0.80;
+  const pGrad = ctx.createRadialGradient(px-pr*0.3, py-pr*0.3, 0, px, py, pr);
+  pGrad.addColorStop(0, '#f0b060'); pGrad.addColorStop(0.5, '#c07830');
+  pGrad.addColorStop(0.85, '#804010'); pGrad.addColorStop(1, '#401a00');
+  ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI*2);
+  ctx.fillStyle = pGrad; ctx.fill();
+  ctx.save();
+  ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI*2); ctx.clip();
+  [[-0.35,0.18],[ 0.1, 0.35],[-0.5,-0.2]].forEach(([dy,h])=>{
+    ctx.fillStyle=`rgba(100,45,0,${0.25+Math.abs(dy)*0.2})`;
+    ctx.fillRect(px-pr, py+pr*dy, pr*2, pr*h);
+  });
+  ctx.restore();
+
+  // Divider
+  ctx.strokeStyle = 'rgba(120,80,255,0.25)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(g.divX, CANVAS_H*0.04); ctx.lineTo(g.divX, CANVAS_H*0.96); ctx.stroke();
+
+  // ── Right panel: form ────────────────────────
+  const rGrad = ctx.createLinearGradient(g.divX, 0, CANVAS_W, 0);
+  rGrad.addColorStop(0, 'rgba(0,0,25,0.55)'); rGrad.addColorStop(1, 'rgba(0,0,15,0.30)');
+  ctx.fillStyle = rGrad; ctx.fillRect(g.divX, 0, CANVAS_W - g.divX, CANVAS_H);
+
+  // LOG IN / SIGN UP toggle
+  [{id:'login',label:'LOG IN',offset:-70},{id:'signup',label:'SIGN UP',offset:70}].forEach(m=>{
+    const tx = g.cx + m.offset, active = state.authMode === m.id;
+    ctx.fillStyle = active ? '#ffd700' : 'rgba(255,255,255,0.18)';
+    ctx.beginPath(); ctx.roundRect(tx-52, g.toggleY-18, 104, 36, 8); ctx.fill();
+    ctx.fillStyle = active ? '#000' : 'rgba(255,255,255,0.65)';
+    ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center';
+    ctx.fillText(m.label, tx, g.toggleY+5);
+  });
+
+  // USERNAME
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '13px monospace';
+  ctx.fillText('USERNAME', g.cx, g.userY - 26);
+  const uname = state.authUsername || `${tap} to enter`;
+  ctx.fillStyle = state.authUsername ? '#fff' : 'rgba(255,255,255,0.25)';
+  ctx.font = 'bold 22px monospace';
+  ctx.fillText(uname.toUpperCase(), g.cx, g.userY, CANVAS_W * 0.5);
+  ctx.strokeStyle = state.authUsername ? '#ffd700' : 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(g.cx-110, g.userY+10); ctx.lineTo(g.cx+110, g.userY+10); ctx.stroke();
+
+  // PIN
+  ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '13px monospace'; ctx.textAlign = 'center';
+  ctx.fillText('PIN', g.cx, g.pinY - 22);
+  for (let i = 0; i < 4; i++) {
+    const dx = g.cx - 45 + i*30, dy = g.pinY;
+    const filled = i < state.authPin.length;
+    ctx.beginPath(); ctx.arc(dx, dy, 10, 0, Math.PI*2);
+    ctx.fillStyle = filled ? '#ffd700' : 'rgba(255,255,255,0.13)'; ctx.fill();
+    ctx.strokeStyle = filled ? '#ffd700' : 'rgba(255,255,255,0.3)'; ctx.lineWidth = 2; ctx.stroke();
+  }
+
+  // Error / loading
+  const msgY = g.padY - 16;
+  if (state.authError) {
+    ctx.fillStyle = '#ff6b6b'; ctx.font = 'bold 13px monospace'; ctx.textAlign = 'center';
+    ctx.fillText(state.authError, g.cx, msgY, CANVAS_W * 0.5);
+  } else if (state.authLoading) {
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 15px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('CHECKING...', g.cx, msgY);
+  }
+
+  // Numpad
+  AUTH_NUMPAD.forEach((row, ri) => {
+    row.forEach((key, ci) => {
+      const bx = g.padX + ci*(AUTH_BTN_W+g.btnGap);
+      const by = g.padY + ri*(g.btnH+g.btnGap);
+      const isConfirm = key==='✓', isBack = key==='←';
+      ctx.fillStyle = isConfirm?'rgba(255,215,0,0.22)':isBack?'rgba(255,100,100,0.18)':'rgba(255,255,255,0.07)';
+      ctx.beginPath(); ctx.roundRect(bx, by, AUTH_BTN_W, g.btnH, 10); ctx.fill();
+      ctx.strokeStyle = isConfirm?'rgba(255,215,0,0.45)':'rgba(255,255,255,0.12)'; ctx.lineWidth=1; ctx.stroke();
+      ctx.fillStyle = isConfirm?'#ffd700':isBack?'#ff8888':'#fff';
+      ctx.font='bold 20px monospace'; ctx.textAlign='center';
+      ctx.fillText(key, bx+AUTH_BTN_W/2, by+g.btnH/2+7);
+    });
+  });
+
+  // Play as Guest
+  const gw = 230, gh = 44;
+  ctx.beginPath(); ctx.roundRect(g.cx-gw/2, g.guestY, gw, gh, 22);
+  ctx.fillStyle='rgba(255,255,255,0.08)'; ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.28)'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font='bold 14px monospace'; ctx.textAlign='center';
+  ctx.fillText('▶  PLAY AS GUEST', g.cx, g.guestY+gh/2+5);
 }
 
 function loadOrCreateProfileForUser(username) {
