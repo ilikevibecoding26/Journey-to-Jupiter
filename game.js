@@ -72,19 +72,23 @@ const ctx = canvas.getContext('2d');
 
 // True on desktop (mouse + hover), false on touch devices
 const isDesktop = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-const TAP = isDesktop ? 'Click' : 'Tap';   // sentence-case
+// True on iPad/tablet in landscape — also use wide landscape layout
+const isTabletLandscape = !isDesktop && window.matchMedia('(min-width: 768px) and (orientation: landscape)').matches;
+// Layout flag: landscape canvas + panels on desktop OR tablet landscape
+const isLandscape = isDesktop || isTabletLandscape;
+const TAP = isDesktop ? 'Click' : 'Tap';   // sentence-case (input method, not layout)
 const tap = isDesktop ? 'click' : 'tap';   // lowercase
 
-// On desktop: full viewport. On mobile: portrait strip.
-let CANVAS_W = isDesktop ? window.innerWidth  : 390;
-let CANVAS_H = isDesktop ? window.innerHeight : 844;
+// On landscape devices: full viewport. On mobile: portrait strip.
+let CANVAS_W = isLandscape ? window.innerWidth  : 390;
+let CANVAS_H = isLandscape ? window.innerHeight : 844;
 canvas.width  = CANVAS_W;
 canvas.height = CANVAS_H;
 const PORT_W  = 390;   // internal portrait width used for panel screens
 
 // Re-run when the page fully loads or is resized (fixes zero-dimensions at startup)
 function initCanvasForDesktop() {
-  if (!isDesktop) return;
+  if (!isLandscape) return;
   CANVAS_W = window.innerWidth;
   CANVAS_H = window.innerHeight;
   canvas.width  = CANVAS_W;
@@ -94,6 +98,10 @@ function initCanvasForDesktop() {
 }
 window.addEventListener('load', initCanvasForDesktop);
 window.addEventListener('resize', initCanvasForDesktop);
+// Reload on iPad orientation change so isTabletLandscape is re-evaluated
+if (isTabletLandscape || (!isDesktop && window.innerWidth >= 768)) {
+  window.addEventListener('orientationchange', () => location.reload());
+}
 
 // ── Settings (persisted) ──────────────────────
 const settings = {
@@ -2632,7 +2640,7 @@ let mousePos = { x: -1, y: -1 };
 function isOverButton(x, y) {
   const hit = b => b && Math.abs(x - b.x) < b.w / 2 && Math.abs(y - b.y) < b.h / 2;
   // Panel screens render in a 390px strip centered on desktop — translate x for those
-  const px = isDesktop ? x - (CANVAS_W - PORT_W) / 2 : x;
+  const px = isLandscape ? x - (CANVAS_W - PORT_W) / 2 : x;  // translate to panel coords on landscape
   const panelHit = b => b && Math.abs(px - b.x) < b.w / 2 && Math.abs(y - b.y) < b.h / 2;
   switch (state.screen) {
     case 'start':
@@ -2796,7 +2804,7 @@ function handleTap(x, y) {
 
   if (state.screen === 'splash')  { state.screen = state.authUser ? 'start' : 'profile'; return; }
   if (state.screen === 'profile') {
-    const px = isDesktop ? x - (CANVAS_W - PORT_W) / 2 : x;
+    const px = isLandscape ? x - (CANVAS_W - PORT_W) / 2 : x;
     for (const btn of profileButtons) {
       if (Math.abs(px - btn.x) < btn.w / 2 && Math.abs(y - btn.y) < btn.h / 2) {
         if (btn.action === 'select') {
@@ -2925,7 +2933,7 @@ function handleTap(x, y) {
     if (Math.abs(x - xBtnX) < 16 && Math.abs(y - xBtnY) < 16) state.dailyChallengeHidden = true;
   }
   if (state.screen === 'shop') {
-    const px = isDesktop ? x - (CANVAS_W - PORT_W) / 2 : x;
+    const px = isLandscape ? x - (CANVAS_W - PORT_W) / 2 : x;
     for (const btn of shopButtons) {
       if (Math.abs(px - btn.x) < btn.w / 2 && Math.abs(y - btn.y) < btn.h / 2) {
         if (btn.action === 'back')  { state.screen = 'start'; break; }
@@ -3138,7 +3146,7 @@ let EXIT_BTN        = { x: 36, y: CANVAS_H - 28, w: 60, h: 40 };
 
 // ── Desktop: reposition buttons for landscape layout ──────────────
 function repositionDesktopButtons() {
-  if (!isDesktop) return;
+  if (!isLandscape) return;
   const RPC = CANVAS_W - 160;
   const by  = (i) => 150 + i * 72;
   SHOP_BTN        = { x: RPC, y: by(0), w: 280, h: 56 };
@@ -3163,7 +3171,7 @@ function repositionDesktopButtons() {
   VIP_SUBSCRIBE_BTN.x = CANVAS_W / 2;
   VIP_BACK_BTN.x      = CANVAS_W / 2;
 }
-if (isDesktop) repositionDesktopButtons();
+if (isLandscape) repositionDesktopButtons();
 
 function hitButton(btn, px, py) {
   return Math.abs(px - btn.x) < btn.w / 2 && Math.abs(py - btn.y) < btn.h / 2;
@@ -3183,7 +3191,7 @@ function beginLaunch() {
 // behind it. All screen-coord buttons (CANVAS_W/2) align to the panel
 // center because the panel IS centered at CANVAS_W/2.
 function withPortraitPanel(fn) {
-  if (!isDesktop) { fn(); return; }
+  if (!isLandscape) { fn(); return; }
 
   const PW = PORT_W;
   const PX = (CANVAS_W - PW) / 2;
@@ -3962,7 +3970,7 @@ function draw() {
   }
 
   if (state.screen === 'start') {
-    if (isDesktop) {
+    if (isLandscape) {
       drawStartScreenDesktop();
     } else {
       drawStartScreen();
@@ -6937,7 +6945,7 @@ function drawDayScene(yOffset) {
   drawCloud(cW * 0.40, 270, 0.72);
   drawCloud(cW * 0.62, 250, 0.78);
   drawCloud(cW * 0.82, 310, 0.65);
-  if (isDesktop) {
+  if (isLandscape) {
     drawCloud(cW * 0.06, 300, 0.55);
     drawCloud(cW * 0.52, 340, 0.60);
     drawCloud(cW * 0.72, 200, 0.70);

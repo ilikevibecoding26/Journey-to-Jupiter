@@ -30,3 +30,12 @@ html, body {
     image-rendering: auto;
   }
 }
+
+/* On tablet in landscape (iPad etc.): also fill the full viewport */
+@media (hover: none) and (min-width: 768px) and (orientation: landscape) {
+  #gameCanvas {
+    width: 100vw;
+    height: 100svh;
+    image-rendering: auto;
+  }
+}
