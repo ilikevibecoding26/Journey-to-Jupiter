@@ -2242,6 +2242,44 @@ function loadUnlockedPacks() {
   catch { return []; }
 }
 function saveUnlockedPacks(arr) { localStorage.setItem('jtj_unlocked_packs', JSON.stringify(arr)); }
+
+// ── VIP weekly unlock logic ────────────────────
+const VIP_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+function loadVipStart()    { return parseInt(localStorage.getItem('jtj_vip_start') || '0'); }
+function saveVipStart(ts)  { localStorage.setItem('jtj_vip_start', ts.toString()); }
+function getVipWeeksUnlocked() {
+  const s = loadVipStart();
+  if (!s) return 0;
+  return Math.floor((Date.now() - s) / VIP_WEEK_MS) + 1; // week 1 = day 0
+}
+function daysUntilVipWeek(weekNum) {
+  const s = loadVipStart();
+  if (!s) return null;
+  return Math.max(0, Math.ceil((s + (weekNum - 1) * VIP_WEEK_MS - Date.now()) / (24 * 60 * 60 * 1000)));
+}
+function grantVipPacksForCurrentWeek() {
+  const weeks = getVipWeeksUnlocked();
+  if (weeks <= 0) return;
+  const due = PACKS.filter(p => p.vip && p.vipMonth <= weeks);
+  let anyNew = false;
+  const up = loadUnlockedPacks();
+  for (const p of due) {
+    if (up.includes(p.id)) continue;
+    up.push(p.id); anyNew = true;
+    const ur = loadUnlocked();      if (!ur.includes(p.id+'_rocket')) { ur.push(p.id+'_rocket'); saveUnlocked(ur);      state.unlockedRockets = ur; }
+    const ut = loadUnlockedTails(); if (!ut.includes(p.id+'_tail'))   { ut.push(p.id+'_tail');   saveUnlockedTails(ut); state.unlockedTails   = ut; }
+    const ub = loadUnlockedBgs();   if (!ub.includes(p.id+'_bg'))     { ub.push(p.id+'_bg');     saveUnlockedBgs(ub);   state.unlockedBgs     = ub; }
+  }
+  if (anyNew) {
+    saveUnlockedPacks(up); state.unlockedPacks = up;
+    saveCurrentProfileData();
+    const newest = due.sort((a,b) => b.vipMonth - a.vipMonth)[0];
+    if (newest && weeks > 1) {
+      state.secretFlash = { life: 3.5, msg: `👑  ${newest.name} UNLOCKED  👑`, sub: 'New VIP pack is yours!' };
+    }
+  }
+}
+
 function loadEquippedPack()     { return localStorage.getItem('jtj_equipped_pack') || null; }
 function saveEquippedPack(id)   {
   if (id) localStorage.setItem('jtj_equipped_pack', id);
@@ -3105,23 +3143,9 @@ function handleTap(x, y) {
   if (state.screen === 'gameover' && hitButton(MAIN_MENU_BTN, x, y)) goMainMenu();
   if (state.screen === 'vip' && hitButton(VIP_BACK_BTN, x, y)) { state.screen = 'shop'; state.shopTab = 'packs'; return; }
   if (state.screen === 'vip' && hitButton(VIP_SUBSCRIBE_BTN, x, y)) {
-    // Unlock all VIP packs locally (replace with real IAP when ready)
-    const vipPacks = PACKS.filter(p => p.vip);
-    const up = loadUnlockedPacks();
-    let anyNew = false;
-    for (const p of vipPacks) {
-      if (!up.includes(p.id)) { up.push(p.id); anyNew = true; }
-    }
-    if (anyNew) {
-      saveUnlockedPacks(up); state.unlockedPacks = up;
-      for (const p of vipPacks) {
-        const ur = loadUnlocked();         if (!ur.includes(p.id+'_rocket')) { ur.push(p.id+'_rocket'); saveUnlocked(ur);         state.unlockedRockets = ur; }
-        const ut = loadUnlockedTails();    if (!ut.includes(p.id+'_tail'))   { ut.push(p.id+'_tail');   saveUnlockedTails(ut);    state.unlockedTails   = ut; }
-        const ub = loadUnlockedBgs();      if (!ub.includes(p.id+'_bg'))     { ub.push(p.id+'_bg');     saveUnlockedBgs(ub);      state.unlockedBgs     = ub; }
-      }
-      saveCurrentProfileData();
-      state.secretFlash = { life: 3.5, msg: '👑  VIP ACTIVATED  👑', sub: '3 exclusive packs unlocked!' };
-    }
+    if (!loadVipStart()) saveVipStart(Date.now()); // record subscription start
+    grantVipPacksForCurrentWeek();                 // grants week-1 pack (royale)
+    state.secretFlash = { life: 3.5, msg: '👑  VIP ACTIVATED  👑', sub: 'ROYALE pack unlocked! More packs unlock weekly.' };
     state.screen = 'shop'; state.shopTab = 'packs';
     return;
   }
@@ -3552,6 +3576,7 @@ function update(delta) {
   if (state.screen === 'splash') {
     state.splashTimer -= delta;
     if (state.splashTimer <= 0) {
+      grantVipPacksForCurrentWeek(); // award any newly earned VIP packs on login
       // If logged in via auth, skip the profile picker
       state.screen = state.authUser ? 'start' : 'profile';
     }
@@ -4608,12 +4633,14 @@ function drawVipScreen() {
   const CW = 108, CH = 136, CGAP = 9;
   const cardsLeft  = (CANVAS_W - (vipPacks.length * CW + (vipPacks.length - 1) * CGAP)) / 2;
   const cardsTop   = 180;
+  const vipActive  = loadVipStart() > 0;
 
   for (let i = 0; i < vipPacks.length; i++) {
-    const pk    = vipPacks[i];
-    const cardX = cardsLeft + i * (CW + CGAP);
-    const cardY = cardsTop;
-    const owned = state.unlockedPacks.includes(pk.id);
+    const pk       = vipPacks[i];
+    const cardX    = cardsLeft + i * (CW + CGAP);
+    const cardY    = cardsTop;
+    const owned    = state.unlockedPacks.includes(pk.id);
+    const daysLeft = (!owned && vipActive) ? (daysUntilVipWeek(pk.vipMonth) ?? 0) : null;
 
     // Background preview (clipped to top 65% of card)
     ctx.save();
@@ -4625,6 +4652,16 @@ function drawVipScreen() {
     ctx.restore();
     ctx.restore();
 
+    // Lock overlay for unowned packs
+    if (!owned) {
+      ctx.save();
+      ctx.beginPath(); ctx.roundRect(cardX, cardY, CW, CH * 0.65, [10, 10, 0, 0]); ctx.clip();
+      ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(cardX, cardY, CW, CH * 0.65);
+      ctx.font = '24px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('🔒', cardX + CW / 2, cardY + CH * 0.32);
+      ctx.restore();
+    }
+
     // Bottom name band
     ctx.beginPath(); ctx.roundRect(cardX, cardY + CH * 0.65, CW, CH * 0.35, [0, 0, 10, 10]);
     ctx.fillStyle = 'rgba(8,0,22,0.90)'; ctx.fill();
@@ -4633,6 +4670,15 @@ function drawVipScreen() {
     ctx.beginPath(); ctx.roundRect(cardX, cardY, CW, CH, 10);
     ctx.strokeStyle = owned ? '#ffd700' : 'rgba(180,80,255,0.55)';
     ctx.lineWidth   = owned ? 2 : 1.5; ctx.stroke();
+
+    // "WEEK N" badge top-left
+    ctx.save();
+    ctx.beginPath(); ctx.roundRect(cardX + 4, cardY + 4, 46, 16, 4);
+    ctx.fillStyle = owned ? 'rgba(255,215,0,0.9)' : 'rgba(80,0,140,0.85)'; ctx.fill();
+    ctx.fillStyle = owned ? '#000' : '#ccc';
+    ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('WEEK ' + pk.vipMonth, cardX + 27, cardY + 12);
+    ctx.restore();
 
     // Mini rocket centred on the band
     ctx.save();
@@ -4648,11 +4694,23 @@ function drawVipScreen() {
     ctx.textBaseline = 'middle';
     ctx.fillText(pk.emoji + ' ' + pk.name, cardX + CW / 2, cardY + CH - 22, CW - 8);
 
-    // Owned badge
+    // Status label
     if (owned) {
       ctx.fillStyle = '#ffd700';
       ctx.font      = 'bold 9px monospace';
       ctx.fillText('✓ OWNED', cardX + CW / 2, cardY + CH - 9, CW - 8);
+    } else if (daysLeft !== null && daysLeft === 0) {
+      ctx.fillStyle = '#aaffaa';
+      ctx.font      = 'bold 8px monospace';
+      ctx.fillText('CLAIM NOW', cardX + CW / 2, cardY + CH - 9, CW - 8);
+    } else if (daysLeft !== null) {
+      ctx.fillStyle = 'rgba(200,155,255,0.8)';
+      ctx.font      = '8px monospace';
+      ctx.fillText(daysLeft + ' DAY' + (daysLeft === 1 ? '' : 'S'), cardX + CW / 2, cardY + CH - 9, CW - 8);
+    } else {
+      ctx.fillStyle = 'rgba(180,130,255,0.6)';
+      ctx.font      = '8px monospace';
+      ctx.fillText('VIP ONLY', cardX + CW / 2, cardY + CH - 9, CW - 8);
     }
   }
 
@@ -4669,7 +4727,7 @@ function drawVipScreen() {
   ctx.beginPath(); ctx.moveTo(36, bY + 11); ctx.lineTo(CANVAS_W - 36, bY + 11); ctx.stroke();
 
   const BENEFITS = [
-    '3 exclusive themed packs',
+    '1 new pack unlocked each week',
     'Custom rocket, trail & background',
     'Exclusive meteor skins per pack',
     'More packs added over time',
@@ -4726,7 +4784,7 @@ function drawVipScreen() {
   ctx.font         = 'bold 22px monospace';
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('👑  SUBSCRIBE', sb.x, sb.y, sb.w - 24);
+  ctx.fillText(vipActive ? '👑  VIP ACTIVE' : '👑  SUBSCRIBE', sb.x, sb.y, sb.w - 24);
 
   // ── Back button ───────────────────────────────
   drawMenuButton(VIP_BACK_BTN, '← BACK', '#1a1a60', '#2828a0', '#8888ff');
