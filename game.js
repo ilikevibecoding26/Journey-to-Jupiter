@@ -2361,6 +2361,10 @@ function saveUnlockedPacks(arr) { localStorage.setItem('jtj_unlocked_packs', JSO
 const VIP_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 function loadVipStart()    { return parseInt(localStorage.getItem('jtj_vip_start') || '0'); }
 function saveVipStart(ts)  { localStorage.setItem('jtj_vip_start', ts.toString()); }
+function loadCustomPacksUnlocked() { return localStorage.getItem('jtj_custompacks_unlocked') === '1'; }
+function saveCustomPacksUnlocked() { localStorage.setItem('jtj_custompacks_unlocked', '1'); }
+function loadCustomPacks() { try { return JSON.parse(localStorage.getItem('jtj_custom_packs') || '[]'); } catch { return []; } }
+function saveCustomPacks(arr) { localStorage.setItem('jtj_custom_packs', JSON.stringify(arr)); }
 function getVipWeeksUnlocked() {
   const s = loadVipStart();
   if (!s) return 0;
@@ -2648,6 +2652,7 @@ const state = {
   // "GAME OVER" text egg — tap it 9× for a free revive
   gameOverTaps: 0, gameOverLastTap: 0,
   secretFlash: { life: 0, msg: '', sub: '' },  // shared flash banner for new secrets
+  customPackCreate: null, // { step:'rocket'|'tail'|'meteor'|'bg', rocket, tail, meteor, bg }
   newAchievements: [],           // achievements unlocked since last start screen visit
   dailyChallengeJustCompleted: false,
   runStarCount:       0,         // stars collected this run
@@ -2795,7 +2800,7 @@ window.addEventListener('keydown', e => {
   }
   // Escape goes back
   if (e.key === 'Escape') {
-    if (state.screen === 'shop')        { state.screen = 'start'; state.shopScrollY = 0; }
+    if (state.screen === 'shop')        { state.screen = 'start'; state.shopScrollY = 0; state.customPackCreate = null; }
     else if (state.screen === 'vip')    { state.screen = 'shop'; state.shopTab = 'packs'; }
     else if (state.screen === 'wheel')  { state.screen = 'start'; }
     else if (state.screen === 'leaderboard') { state.screen = 'start'; }
@@ -3120,8 +3125,8 @@ function handleTap(x, y) {
     const px = isLandscape ? x - (CANVAS_W - shopPanelW()) / 2 : x;
     for (const btn of shopButtons) {
       if (Math.abs(px - btn.x) < btn.w / 2 && Math.abs(y - btn.y) < btn.h / 2) {
-        if (btn.action === 'back')  { state.screen = 'start'; break; }
-        if (btn.action === 'tab') { state.shopTab = btn.id; state.shopScrollY = 0; break; }
+        if (btn.action === 'back')  { state.screen = 'start'; state.customPackCreate = null; break; }
+        if (btn.action === 'tab') { state.shopTab = btn.id; state.shopScrollY = 0; state.customPackCreate = null; break; }
         if (btn.action === 'equip') {
           state.equippedRocket = btn.id;
           saveEquipped(btn.id);
@@ -3196,6 +3201,77 @@ function handleTap(x, y) {
           state.equippedPack = btn.id;
           saveEquippedPack(btn.id);
           saveCurrentProfileData(); break;
+        }
+        if (btn.action === 'unlock_custompacks') {
+          saveCustomPacksUnlocked();
+          state.shopTab = 'custompacks'; state.shopScrollY = 0;
+          state.secretFlash = { life: 3.5, msg: '🪐  CUSTOM PACKS', sub: 'Create your own custom pack!' };
+          break;
+        }
+        if (btn.action === 'custompacks_new') {
+          const isVip = loadVipStart() > 0;
+          const packs = loadCustomPacks();
+          if (!isVip && packs.length >= 3) {
+            state.secretFlash = { life: 3, msg: '👑 VIP REQUIRED', sub: 'Upgrade to VIP for unlimited custom packs' };
+            break;
+          }
+          state.customPackCreate = { step: 'rocket', rocket: null, tail: null, meteor: null, bg: null };
+          state.shopScrollY = 0;
+          break;
+        }
+        if (btn.action === 'custompacks_select') {
+          const cr = state.customPackCreate;
+          if (!cr) break;
+          if (cr.step==='rocket') cr.rocket=btn.id;
+          else if (cr.step==='tail') cr.tail=btn.id;
+          else if (cr.step==='meteor') cr.meteor=btn.id;
+          else if (cr.step==='bg') cr.bg=btn.id;
+          break;
+        }
+        if (btn.action === 'custompacks_next') {
+          const cr = state.customPackCreate;
+          if (!cr) break;
+          const steps = ['rocket','tail','meteor','bg'];
+          const idx = steps.indexOf(cr.step);
+          if (idx < steps.length - 1) {
+            cr.step = steps[idx+1]; state.shopScrollY = 0;
+          } else {
+            nameInputCallback = (name) => {
+              if (!name || !name.trim()) { state.screen = 'shop'; return; }
+              const packs = loadCustomPacks();
+              packs.push({ id: Date.now().toString(), name: name.trim().toUpperCase(), rocket: cr.rocket, tail: cr.tail, meteor: cr.meteor, bg: cr.bg });
+              saveCustomPacks(packs);
+              state.customPackCreate = null;
+              state.shopTab = 'custompacks'; state.shopScrollY = 0;
+              state.screen = 'shop';
+            };
+            showNameInput();
+          }
+          break;
+        }
+        if (btn.action === 'custompacks_cancel') {
+          state.customPackCreate = null; state.shopScrollY = 0;
+          state.shopTab = 'custompacks'; break;
+        }
+        if (btn.action === 'custompacks_equip') {
+          const packs = loadCustomPacks();
+          const cp = packs.find(p => p.id === btn.id);
+          if (cp) {
+            saveEquipped(cp.rocket); state.equippedRocket = cp.rocket;
+            saveEquippedTail(cp.tail); state.equippedTail = cp.tail;
+            saveEquippedMeteor(cp.meteor); state.equippedMeteor = cp.meteor;
+            saveEquippedBg(cp.bg); state.equippedBg = cp.bg;
+            state.equippedPack = null; saveEquippedPack(null);
+            saveCurrentProfileData();
+          }
+          break;
+        }
+        if (btn.action === 'custompacks_delete') {
+          let packs = loadCustomPacks();
+          packs = packs.filter(p => p.id !== btn.id);
+          saveCustomPacks(packs);
+          state.shopScrollY = Math.max(0, state.shopScrollY - 155);
+          break;
         }
         if (btn.action === 'vip_screen') { state.screen = 'vip'; break; }
         if (btn.action === 'unlock_pack' && btn.canAfford) {
@@ -5445,6 +5521,15 @@ function drawWheelScreen(){
 function shopContentHeight() {
   const CARD_H=132, GAP=7, PCARD_H=148;
   const COLS = CANVAS_W >= 900 ? 4 : CANVAS_W >= 600 ? 3 : 2;
+  if (state.customPackCreate) {
+    const step = state.customPackCreate.step;
+    let count = 0;
+    if (step==='rocket') count = ROCKETS.filter(r => state.unlockedRockets.includes(r.id)).length;
+    else if (step==='tail') count = TAILS.filter(t => state.unlockedTails.includes(t.id)).length;
+    else if (step==='meteor') count = METEORS.filter(m => m.packId ? state.unlockedPacks.includes(m.packId) : state.unlockedMeteors.includes(m.id)).length;
+    else if (step==='bg') count = BACKGROUNDS.filter(b => state.unlockedBgs.includes(b.id)).length;
+    return Math.ceil(count/COLS)*(CARD_H+GAP)-GAP;
+  }
   if (state.shopTab==='rockets')     return Math.ceil(ROCKETS.length/COLS)*(CARD_H+GAP)-GAP;
   if (state.shopTab==='tails')       return Math.ceil(TAILS.length/COLS)*(CARD_H+GAP)-GAP;
   if (state.shopTab==='meteors')     return Math.ceil(METEORS.length/COLS)*(CARD_H+GAP)-GAP;
@@ -5452,12 +5537,14 @@ function shopContentHeight() {
     const vis = BACKGROUNDS.filter(b => !b.wheelOnly && (!b.secret || state.unlockedBgs.includes(b.id)));
     return Math.ceil(vis.length/COLS)*(CARD_H+GAP)-GAP;
   }
+  if (state.shopTab==='custompacks') return (52+GAP) + loadCustomPacks().length*(PCARD_H+GAP);
   if (state.shopTab==='packs')       return PACKS.length*(PCARD_H+GAP)-GAP;
   return 0;
 }
 function clampShopScroll() {
-  const TAB_Y=70,TAB_H=32,gridTopBase=TAB_Y+TAB_H+10;
-  const visH = CANVAS_H - 60 - gridTopBase;
+  const gridTopBase = state.customPackCreate ? 86 : 112;
+  const clipBottom = state.customPackCreate ? CANVAS_H - 70 : CANVAS_H - 60;
+  const visH = clipBottom - gridTopBase;
   const maxScroll = Math.max(0, shopContentHeight() - visH);
   state.shopScrollY = Math.max(0, Math.min(state.shopScrollY, maxScroll));
 }
@@ -5474,6 +5561,88 @@ function drawShopScreen() {
     ctx.fillStyle = `rgba(200,210,255,${s.alpha * 0.5})`; ctx.fill();
   }
 
+  // ──── CREATOR MODE ────────────────────────────────────
+  if (state.customPackCreate) {
+    const c = state.customPackCreate;
+    ctx.fillStyle = '#ffd060'; ctx.font = 'bold 22px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🪐  CREATE YOUR PACK', CANVAS_W / 2, 30);
+    const stepLabels = { rocket: 'CHOOSE A ROCKET', tail: 'CHOOSE A TRAIL', meteor: 'CHOOSE A METEOR', bg: 'CHOOSE A BACKGROUND' };
+    ctx.fillStyle = '#aaaaff'; ctx.font = 'bold 13px monospace';
+    ctx.fillText(stepLabels[c.step], CANVAS_W / 2, 54);
+    const steps = ['rocket', 'tail', 'meteor', 'bg'];
+    const stepIdx = steps.indexOf(c.step);
+    for (let i = 0; i < steps.length; i++) {
+      const dotX = CANVAS_W/2 + (i - 1.5) * 26;
+      ctx.fillStyle = i <= stepIdx ? '#ff6b35' : 'rgba(255,255,255,0.15)';
+      ctx.beginPath(); ctx.arc(dotX, 72, 6, 0, Math.PI*2); ctx.fill();
+    }
+    const CARD_H=132, GAP=7;
+    const COLS = CANVAS_W >= 900 ? 4 : CANVAS_W >= 600 ? 3 : 2;
+    const CARD_W = COLS === 2 ? 168 : Math.floor((CANVAS_W - GAP*(COLS+1)) / COLS);
+    const gridLeft = (CANVAS_W - (COLS*CARD_W + (COLS-1)*GAP)) / 2;
+    const GRID_TOP_BASE = 86, CLIP_BOTTOM = CANVAS_H - 70;
+    clampShopScroll();
+    const scrollY = state.shopScrollY;
+    const gridTop = GRID_TOP_BASE - scrollY;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, GRID_TOP_BASE, CANVAS_W, CLIP_BOTTOM - GRID_TOP_BASE); ctx.clip();
+    let items = [], selectedId = null;
+    if (c.step === 'rocket') { items = ROCKETS.filter(r => state.unlockedRockets.includes(r.id)); selectedId = c.rocket; }
+    else if (c.step === 'tail') { items = TAILS.filter(t => state.unlockedTails.includes(t.id)); selectedId = c.tail; }
+    else if (c.step === 'meteor') { items = METEORS.filter(m => m.packId ? state.unlockedPacks.includes(m.packId) : state.unlockedMeteors.includes(m.id)); selectedId = c.meteor; }
+    else if (c.step === 'bg') { items = BACKGROUNDS.filter(b => state.unlockedBgs.includes(b.id)); selectedId = c.bg; }
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const col = i%COLS, row = Math.floor(i/COLS);
+      const cx = gridLeft + col*(CARD_W+GAP) + CARD_W/2, cy = gridTop + row*(CARD_H+GAP) + CARD_H/2;
+      const cardX = cx-CARD_W/2, cardY = cy-CARD_H/2;
+      const isSel = item.id === selectedId;
+      ctx.beginPath(); ctx.roundRect(cardX, cardY, CARD_W, CARD_H, 14);
+      ctx.fillStyle = isSel ? 'rgba(255,107,53,0.15)' : 'rgba(18,18,34,0.85)'; ctx.fill();
+      ctx.strokeStyle = isSel ? '#ff6b35' : 'rgba(50,50,80,0.4)';
+      ctx.lineWidth = isSel ? 2 : 1; ctx.stroke();
+      if (c.step === 'rocket') {
+        ctx.save(); ctx.translate(cx-CARD_W*0.22, cardY+CARD_H*0.42); ctx.scale(0.42,0.42); drawRocket(0,0,item); ctx.restore();
+      } else if (c.step === 'tail') {
+        ctx.save(); ctx.translate(cx-CARD_W*0.22, cardY+CARD_H*0.40); ctx.scale(0.55,0.55);
+        const mbb=0, mbw=28;
+        ctx.beginPath(); ctx.moveTo(-mbw*0.4,mbb); ctx.lineTo(mbw*0.4,mbb); ctx.lineTo(mbw*0.5,mbb+10); ctx.lineTo(-mbw*0.5,mbb+10); ctx.closePath();
+        ctx.fillStyle='#7a7a8a'; ctx.fill(); item.drawFn(mbb, mbw, 10); ctx.restore();
+      } else if (c.step === 'meteor') {
+        const pm={x:0,y:0,rotation:0.4,rx:16,ry:16,type:'normal'};
+        ctx.save(); ctx.translate(cx-CARD_W*0.12, cy+4); item.drawFn(pm); ctx.restore();
+      } else if (c.step === 'bg') {
+        drawBgPreview(item.id, cardX+8, cardY+8, CARD_W*0.48, CARD_H*0.52);
+      }
+      ctx.fillStyle='#ffffff'; ctx.font='bold 13px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(item.name, cx, cardY+CARD_H-42, CARD_W-8);
+      const btnW=126, btnH=28, btnX=cx, btnY=cardY+CARD_H-18;
+      ctx.beginPath(); ctx.roundRect(btnX-btnW/2, btnY-btnH/2, btnW, btnH, 7);
+      if (isSel) {
+        ctx.fillStyle='#ff6b35'; ctx.fill();
+        ctx.fillStyle='#fff'; ctx.font='bold 11px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('✓ SELECTED', btnX, btnY, btnW-8);
+      } else {
+        ctx.fillStyle='rgba(40,40,80,0.9)'; ctx.fill();
+        ctx.strokeStyle='#4444aa'; ctx.lineWidth=1; ctx.stroke();
+        ctx.fillStyle='#aaaaff'; ctx.font='bold 11px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('SELECT', btnX, btnY, btnW-8);
+      }
+      shopButtons.push({ action: 'custompacks_select', id: item.id, x: btnX, y: btnY, w: btnW, h: btnH });
+    }
+    ctx.restore();
+    const cancelBtn = { x: CANVAS_W/2-90, y: CANVAS_H-38, w: 160, h: 52 };
+    drawMenuButton(cancelBtn, '✕ CANCEL', '#1a1a60', '#2828a0', '#8888ff');
+    shopButtons.push({ action: 'custompacks_cancel', x: cancelBtn.x, y: cancelBtn.y, w: cancelBtn.w, h: cancelBtn.h });
+    if (selectedId) {
+      const isLast = c.step === 'bg';
+      const nextBtn = { x: CANVAS_W/2+90, y: CANVAS_H-38, w: 160, h: 52 };
+      drawMenuButton(nextBtn, isLast ? '→ NAME IT' : '→ NEXT', '#091a09', '#1a4a1a', '#66ff66');
+      shopButtons.push({ action: 'custompacks_next', x: nextBtn.x, y: nextBtn.y, w: nextBtn.w, h: nextBtn.h });
+    }
+    return;
+  }
+
   // Title
   ctx.fillStyle = '#ffd060'; ctx.font = 'bold 26px monospace';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -5482,16 +5651,23 @@ function drawShopScreen() {
   ctx.fillText(`🪙 ${state.coins}  coins available`, CANVAS_W / 2, 54, CANVAS_W - 40);
 
   // ── Tabs ──────────────────────────────────────────────
-  const TAB_Y = 70, TAB_H = 32, TAB_W = 72, TAB_GAP = 4;
-  const tabTotalW = 5 * TAB_W + 4 * TAB_GAP;
-  const tabStartX = (CANVAS_W - tabTotalW) / 2;
-  const tabs = [
-    { id: 'rockets',     label: '🚀',        x: tabStartX + TAB_W * 0.5,                 y: TAB_Y + TAB_H / 2 },
-    { id: 'tails',       label: '🔥',        x: tabStartX + TAB_W * 1.5 + TAB_GAP,       y: TAB_Y + TAB_H / 2 },
-    { id: 'meteors',     label: '☄️',        x: tabStartX + TAB_W * 2.5 + TAB_GAP * 2,   y: TAB_Y + TAB_H / 2 },
-    { id: 'backgrounds', label: '🌌',        x: tabStartX + TAB_W * 3.5 + TAB_GAP * 3,   y: TAB_Y + TAB_H / 2 },
-    { id: 'packs',       label: '⭐ PACKS',  x: tabStartX + TAB_W * 4.5 + TAB_GAP * 4,   y: TAB_Y + TAB_H / 2 },
+  const TAB_Y = 70, TAB_H = 32, TAB_GAP = 4;
+  const tabDefs = [
+    { id: 'rockets',     label: '🚀' },
+    { id: 'tails',       label: '🔥' },
+    { id: 'meteors',     label: '☄️' },
+    { id: 'backgrounds', label: '🌌' },
   ];
+  if (loadCustomPacksUnlocked()) tabDefs.push({ id: 'custompacks', label: '🪐' });
+  tabDefs.push({ id: 'packs', label: '⭐ PACKS' });
+  const TAB_W = Math.min(72, Math.floor((CANVAS_W - 16 - TAB_GAP * (tabDefs.length - 1)) / tabDefs.length));
+  const tabTotalW = tabDefs.length * TAB_W + (tabDefs.length - 1) * TAB_GAP;
+  const tabStartX = (CANVAS_W - tabTotalW) / 2;
+  const tabs = tabDefs.map((d, i) => ({
+    id: d.id, label: d.label,
+    x: tabStartX + TAB_W * (i + 0.5) + TAB_GAP * i,
+    y: TAB_Y + TAB_H / 2,
+  }));
   for (const tab of tabs) {
     const active = state.shopTab === tab.id;
     ctx.beginPath(); ctx.roundRect(tab.x - TAB_W / 2, TAB_Y, TAB_W, TAB_H, 10);
@@ -5640,6 +5816,74 @@ function drawShopScreen() {
         },
         isOwned ? 'equip_meteor' : 'unlock_meteor', mr.id, packLockLabel);
     }
+  } else if (state.shopTab === 'custompacks') {
+    // ── Custom packs ────────────────────────────────────
+    const PCARD_W = CANVAS_W - 24, PCARD_H = 148;
+    const pGridLeft = 12;
+    const isVip = loadVipStart() > 0;
+    const customPacks = loadCustomPacks();
+    const canMakeNew = isVip || customPacks.length < 3;
+    // "MAKE A NEW PACK" button at top
+    const newBtnY = gridTop + 26;
+    const newBtn = { x: CANVAS_W/2, y: newBtnY, w: PCARD_W, h: 52 };
+    if (canMakeNew) {
+      drawMenuButton(newBtn, '✦  MAKE A NEW PACK', '#091a09', '#1a4a1a', '#66ff66');
+    } else {
+      drawMenuButton(newBtn, '👑  VIP FOR MORE PACKS', '#1a1000', '#3a2800', '#aa8800');
+    }
+    shopButtons.push({ action: 'custompacks_new', x: newBtn.x, y: newBtn.y, w: newBtn.w, h: newBtn.h });
+    // Custom pack cards
+    for (let i = 0; i < customPacks.length; i++) {
+      const cp = customPacks[i];
+      const cardX = pGridLeft, cardY = gridTop + 52 + GAP + i*(PCARD_H+GAP);
+      const cx = cardX + PCARD_W/2, cy = cardY + PCARD_H/2;
+      const isEquipped = state.equippedRocket === cp.rocket && state.equippedTail === cp.tail &&
+                         state.equippedMeteor === cp.meteor && state.equippedBg === cp.bg;
+      ctx.beginPath(); ctx.roundRect(cardX, cardY, PCARD_W, PCARD_H, 14);
+      ctx.fillStyle = isEquipped ? 'rgba(255,220,60,0.10)' : 'rgba(30,30,60,0.85)'; ctx.fill();
+      ctx.strokeStyle = isEquipped ? '#ffd700' : 'rgba(80,80,160,0.6)';
+      ctx.lineWidth = isEquipped ? 2 : 1; ctx.stroke();
+      // Gameplay preview
+      const prevW = PCARD_W*0.38, prevH = PCARD_H-12;
+      ctx.save(); ctx.beginPath(); ctx.roundRect(cardX+6, cardY+6, prevW, prevH, 10); ctx.clip();
+      ctx.save(); ctx.translate(cardX+6, cardY+6); ctx.scale(prevW/CANVAS_W, prevH/CANVAS_H);
+      const bgDef = BACKGROUNDS.find(b => b.id === cp.bg);
+      if (bgDef) bgDef.drawFn();
+      const mrDef = METEORS.find(m => m.id === cp.meteor);
+      const t = gameTime;
+      if (mrDef) mrDef.drawFn({ x:70, y:(t*110)%(CANVAS_H+50)-25, rx:14, ry:14, rotation:0.5, type:'normal' });
+      const rX=CANVAS_W*0.54, rY=CANVAS_H*0.66;
+      const tDef = TAILS.find(td => td.id === cp.tail);
+      if (tDef) { ctx.save(); ctx.translate(rX,0); tDef.drawFn(rY+16,22,8); ctx.restore(); }
+      const rDef = ROCKETS.find(r => r.id === cp.rocket);
+      if (rDef) drawRocket(rX, rY, rDef);
+      ctx.restore(); ctx.restore();
+      // Name
+      ctx.fillStyle='#ffffff'; ctx.font='bold 16px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('🪐 '+cp.name, cx+PCARD_W*0.18, cardY+PCARD_H*0.28, PCARD_W*0.56);
+      // Equip button
+      const eW=140, eH=28, eX=cx+PCARD_W*0.18, eY=cardY+PCARD_H-46;
+      ctx.beginPath(); ctx.roundRect(eX-eW/2, eY-eH/2, eW, eH, 10);
+      if (isEquipped) {
+        ctx.fillStyle='#ff6b35'; ctx.fill();
+        ctx.fillStyle='#fff'; ctx.font='bold 11px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('✓ EQUIPPED', eX, eY, eW-8);
+      } else {
+        ctx.fillStyle='rgba(40,40,80,0.9)'; ctx.fill();
+        ctx.strokeStyle='#4444aa'; ctx.lineWidth=1.2; ctx.stroke();
+        ctx.fillStyle='#aaaaff'; ctx.font='bold 11px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('EQUIP', eX, eY, eW-8);
+        shopButtons.push({ action: 'custompacks_equip', id: cp.id, x: eX, y: eY, w: eW, h: eH });
+      }
+      // Delete button
+      const dW=90, dH=22, dX=cx+PCARD_W*0.18, dY=cardY+PCARD_H-20;
+      ctx.beginPath(); ctx.roundRect(dX-dW/2, dY-dH/2, dW, dH, 6);
+      ctx.fillStyle='rgba(80,10,10,0.8)'; ctx.fill();
+      ctx.strokeStyle='#aa3333'; ctx.lineWidth=1; ctx.stroke();
+      ctx.fillStyle='#ff6666'; ctx.font='bold 10px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('✕  DELETE', dX, dY, dW-6);
+      shopButtons.push({ action: 'custompacks_delete', id: cp.id, x: dX, y: dY, w: dW, h: dH });
+    }
   } else if (state.shopTab === 'packs') {
     // ── Packs grid — 1 column, tall cards ──────────────
     const PCARD_W = CANVAS_W - 24, PCARD_H = 148;
@@ -5726,6 +5970,15 @@ function drawShopScreen() {
 
   // End scroll clip
   ctx.restore();
+
+  // Secret star — subtle button at far right of packs tab, reveals custom packs
+  if (state.shopTab === 'packs' && !loadCustomPacksUnlocked()) {
+    const starX = CANVAS_W - 14, starY = TAB_Y + TAB_H/2;
+    ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(255,255,255,0.10)';
+    ctx.fillText('⭐', starX, starY);
+    shopButtons.push({ action: 'unlock_custompacks', x: starX, y: starY, w: 28, h: 28 });
+  }
 
   // Scroll indicator
   const visH = CLIP_BOTTOM - GRID_TOP_BASE;
