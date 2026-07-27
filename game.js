@@ -3392,7 +3392,7 @@ function withPortraitPanel(fn) {
 
 // Shop uses a wider panel in landscape (up to 800px vs 390px for other panels)
 function shopPanelW() {
-  return isLandscape ? Math.min(CANVAS_W - 80, 800) : PORT_W;
+  return isLandscape ? CANVAS_W - 40 : PORT_W;
 }
 
 function withShopPanel(fn) {
@@ -5423,7 +5423,7 @@ function drawWheelScreen(){
 
 function shopContentHeight() {
   const CARD_H=132, GAP=7, PCARD_H=148;
-  const COLS = CANVAS_W >= 600 ? 3 : 2;
+  const COLS = CANVAS_W >= 900 ? 4 : CANVAS_W >= 600 ? 3 : 2;
   if (state.shopTab==='rockets')     return Math.ceil(ROCKETS.length/COLS)*(CARD_H+GAP)-GAP;
   if (state.shopTab==='tails')       return Math.ceil(TAILS.length/COLS)*(CARD_H+GAP)-GAP;
   if (state.shopTab==='meteors')     return Math.ceil(METEORS.length/COLS)*(CARD_H+GAP)-GAP;
@@ -5483,7 +5483,7 @@ function drawShopScreen() {
   }
 
   const CARD_H = 132, GAP = 7;
-  const COLS = CANVAS_W >= 600 ? 3 : 2;
+  const COLS = CANVAS_W >= 900 ? 4 : CANVAS_W >= 600 ? 3 : 2;
   const CARD_W = COLS === 2 ? 168 : Math.floor((CANVAS_W - GAP * (COLS + 1)) / COLS);
   const gridLeft = (CANVAS_W - (COLS * CARD_W + (COLS - 1) * GAP)) / 2;
   const GRID_TOP_BASE = TAB_Y + TAB_H + 10;
