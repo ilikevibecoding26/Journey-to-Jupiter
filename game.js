@@ -2791,14 +2791,16 @@ let mousePos = { x: -1, y: -1 };
 
 function isOverButton(x, y) {
   const hit = b => b && Math.abs(x - b.x) < b.w / 2 && Math.abs(y - b.y) < b.h / 2;
-  // Panel screens render in a 390px strip centered on desktop — translate x for those
-  const px = isLandscape ? x - (CANVAS_W - PORT_W) / 2 : x;  // translate to panel coords on landscape
-  const panelHit = b => b && Math.abs(px - b.x) < b.w / 2 && Math.abs(y - b.y) < b.h / 2;
+  // Panel screens render in a centered strip — translate x to panel-local coords
+  const panelOff = isLandscape ? (CANVAS_W - PORT_W) / 2 : 0;
+  const shopOff  = isLandscape ? (CANVAS_W - shopPanelW()) / 2 : 0;
+  const panelHit = b => b && Math.abs((x - panelOff) - b.x) < b.w / 2 && Math.abs(y - b.y) < b.h / 2;
+  const shopHit  = b => b && Math.abs((x - shopOff)  - b.x) < b.w / 2 && Math.abs(y - b.y) < b.h / 2;
   switch (state.screen) {
     case 'start':
       return hit(LAUNCH_BTN) || hit(SETTINGS_BTN) || hit(LEADERBOARD_BTN) ||
              hit(SHOP_BTN) || hit(PROFILE_BTN) || hit(TUTORIAL_BTN) || hit(WHEEL_BTN);
-    case 'shop':    return shopButtons.some(panelHit);
+    case 'shop':    return shopButtons.some(shopHit);
     case 'profile': return profileButtons.some(panelHit);
     case 'vip':       return hit(VIP_SUBSCRIBE_BTN) || hit(VIP_BACK_BTN);
     case 'gameover':  return hit(REVIVE_BTN) || hit(TRY_AGAIN_BTN) || hit(MAIN_MENU_BTN);
@@ -3094,7 +3096,7 @@ function handleTap(x, y) {
     if (Math.abs(x - xBtnX) < 16 && Math.abs(y - xBtnY) < 16) state.dailyChallengeHidden = true;
   }
   if (state.screen === 'shop') {
-    const px = isLandscape ? x - (CANVAS_W - PORT_W) / 2 : x;
+    const px = isLandscape ? x - (CANVAS_W - shopPanelW()) / 2 : x;
     for (const btn of shopButtons) {
       if (Math.abs(px - btn.x) < btn.w / 2 && Math.abs(y - btn.y) < btn.h / 2) {
         if (btn.action === 'back')  { state.screen = 'start'; break; }
@@ -3378,6 +3380,40 @@ function withPortraitPanel(fn) {
   ctx.stroke();
 
   // Clip to panel, translate, and temporarily narrow CANVAS_W
+  ctx.save();
+  ctx.beginPath(); ctx.rect(PX, 0, PW, CANVAS_H); ctx.clip();
+  ctx.translate(PX, 0);
+  const savedW = CANVAS_W;
+  CANVAS_W = PW;
+  fn();
+  CANVAS_W = savedW;
+  ctx.restore();
+}
+
+// Shop uses a wider panel in landscape (up to 800px vs 390px for other panels)
+function shopPanelW() {
+  return isLandscape ? Math.min(CANVAS_W - 80, 800) : PORT_W;
+}
+
+function withShopPanel(fn) {
+  if (!isLandscape) { fn(); return; }
+
+  const PW = shopPanelW();
+  const PX = (CANVAS_W - PW) / 2;
+
+  ctx.fillStyle = 'rgb(2,0,8)';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  for (const s of starsFar) {
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(200,210,255,${s.alpha * 0.5})`; ctx.fill();
+  }
+  ctx.strokeStyle = 'rgba(100,80,220,0.35)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(PX, 0); ctx.lineTo(PX, CANVAS_H);
+  ctx.moveTo(PX + PW, 0); ctx.lineTo(PX + PW, CANVAS_H);
+  ctx.stroke();
+
   ctx.save();
   ctx.beginPath(); ctx.rect(PX, 0, PW, CANVAS_H); ctx.clip();
   ctx.translate(PX, 0);
@@ -4153,7 +4189,7 @@ function draw() {
   if (state.screen === 'settings')    { withPortraitPanel(() => drawSettingsScreen());    return; }
   if (state.screen === 'leaderboard') { withPortraitPanel(() => drawLeaderboardScreen()); return; }
   if (state.screen === 'tutorial')    { withPortraitPanel(() => drawTutorialScreen());    return; }
-  if (state.screen === 'shop')        { withPortraitPanel(() => drawShopScreen());        return; }
+  if (state.screen === 'shop')        { withShopPanel(() => drawShopScreen());            return; }
   if (state.screen === 'vip')         { withPortraitPanel(() => drawVipScreen());         return; }
   if (state.screen === 'nameentry')   { withPortraitPanel(() => drawNameEntryScreen());   return; }
 
@@ -5386,13 +5422,14 @@ function drawWheelScreen(){
 // ── Leaderboard screen ────────────────────────
 
 function shopContentHeight() {
-  const CARD_H=132,GAP=7,PCARD_H=148;
-  if (state.shopTab==='rockets')     return Math.ceil(ROCKETS.length/2)*(CARD_H+GAP)-GAP;
-  if (state.shopTab==='tails')       return Math.ceil(TAILS.length/2)*(CARD_H+GAP)-GAP;
-  if (state.shopTab==='meteors')     return Math.ceil(METEORS.length/2)*(CARD_H+GAP)-GAP;
+  const CARD_H=132, GAP=7, PCARD_H=148;
+  const COLS = CANVAS_W >= 600 ? 3 : 2;
+  if (state.shopTab==='rockets')     return Math.ceil(ROCKETS.length/COLS)*(CARD_H+GAP)-GAP;
+  if (state.shopTab==='tails')       return Math.ceil(TAILS.length/COLS)*(CARD_H+GAP)-GAP;
+  if (state.shopTab==='meteors')     return Math.ceil(METEORS.length/COLS)*(CARD_H+GAP)-GAP;
   if (state.shopTab==='backgrounds') {
     const vis = BACKGROUNDS.filter(b => !b.wheelOnly && (!b.secret || state.unlockedBgs.includes(b.id)));
-    return Math.ceil(vis.length/2)*(CARD_H+GAP)-GAP;
+    return Math.ceil(vis.length/COLS)*(CARD_H+GAP)-GAP;
   }
   if (state.shopTab==='packs')       return PACKS.length*(PCARD_H+GAP)-GAP;
   return 0;
@@ -5445,8 +5482,10 @@ function drawShopScreen() {
     shopButtons.push({ action: 'tab', id: tab.id, x: tab.x, y: tab.y, w: TAB_W, h: TAB_H });
   }
 
-  const CARD_W = 168, CARD_H = 132, GAP = 7;
-  const gridLeft = (CANVAS_W - (2 * CARD_W + GAP)) / 2;
+  const CARD_H = 132, GAP = 7;
+  const COLS = CANVAS_W >= 600 ? 3 : 2;
+  const CARD_W = COLS === 2 ? 168 : Math.floor((CANVAS_W - GAP * (COLS + 1)) / COLS);
+  const gridLeft = (CANVAS_W - (COLS * CARD_W + (COLS - 1) * GAP)) / 2;
   const GRID_TOP_BASE = TAB_Y + TAB_H + 10;
   const CLIP_BOTTOM = CANVAS_H - 60;
 
@@ -5497,7 +5536,7 @@ function drawShopScreen() {
     // Hide wheel-only items unless already won from the spin wheel
     const shopRocketList = ROCKETS.filter(r => !r.wheelOnly || unlocked.includes(r.id));
     for (let i = 0; i < shopRocketList.length; i++) {
-      const r = shopRocketList[i], col = i%2, row = Math.floor(i/2);
+      const r = shopRocketList[i], col = i%COLS, row = Math.floor(i/COLS);
       const cx = gridLeft + col*(CARD_W+GAP) + CARD_W/2, cy = gridTop + row*(CARD_H+GAP) + CARD_H/2;
       const cardX = cx-CARD_W/2, cardY = cy-CARD_H/2;
       const isOwned = unlocked.includes(r.id), isEquipped = equipped===r.id, canAfford = state.coins>=r.cost;
@@ -5516,7 +5555,7 @@ function drawShopScreen() {
     // Hide wheel-only items unless already won from the spin wheel
     const shopTailList = TAILS.filter(t => !t.wheelOnly || unlocked.includes(t.id));
     for (let i = 0; i < shopTailList.length; i++) {
-      const t = shopTailList[i], col = i%2, row = Math.floor(i/2);
+      const t = shopTailList[i], col = i%COLS, row = Math.floor(i/COLS);
       const cx = gridLeft + col*(CARD_W+GAP) + CARD_W/2, cy = gridTop + row*(CARD_H+GAP) + CARD_H/2;
       const cardX = cx-CARD_W/2, cardY = cy-CARD_H/2;
       const isOwned = unlocked.includes(t.id), isEquipped = equipped===t.id, canAfford = state.coins>=t.cost;
@@ -5543,7 +5582,7 @@ function drawShopScreen() {
     // Hide wheel-only and secret items unless the player has already unlocked them
     const shopBgList = BACKGROUNDS.filter(b => (!b.wheelOnly || unlocked.includes(b.id)) && (!b.secret || unlocked.includes(b.id)));
     for (let i = 0; i < shopBgList.length; i++) {
-      const b = shopBgList[i], col = i%2, row = Math.floor(i/2);
+      const b = shopBgList[i], col = i%COLS, row = Math.floor(i/COLS);
       const cx = gridLeft + col*(CARD_W+GAP) + CARD_W/2, cy = gridTop + row*(CARD_H+GAP) + CARD_H/2;
       const cardX = cx-CARD_W/2, cardY = cy-CARD_H/2;
       const isOwned = unlocked.includes(b.id), isEquipped = equipped===b.id, canAfford = state.coins>=b.cost;
@@ -5560,7 +5599,7 @@ function drawShopScreen() {
   } else if (state.shopTab === 'meteors') {
     const unlocked = state.unlockedMeteors, equipped = state.equippedMeteor;
     for (let i = 0; i < METEORS.length; i++) {
-      const mr = METEORS[i], col = i%2, row = Math.floor(i/2);
+      const mr = METEORS[i], col = i%COLS, row = Math.floor(i/COLS);
       const cx = gridLeft + col*(CARD_W+GAP) + CARD_W/2, cy = gridTop + row*(CARD_H+GAP) + CARD_H/2;
       const cardX = cx-CARD_W/2, cardY = cy-CARD_H/2;
       const isOwned = mr.packId ? state.unlockedPacks.includes(mr.packId) : unlocked.includes(mr.id);
@@ -5582,8 +5621,8 @@ function drawShopScreen() {
     }
   } else if (state.shopTab === 'packs') {
     // ── Packs grid — 1 column, tall cards ──────────────
-    const PCARD_W = CARD_W * 2 + GAP, PCARD_H = 148;
-    const pGridLeft = (CANVAS_W - PCARD_W) / 2;
+    const PCARD_W = CANVAS_W - 24, PCARD_H = 148;
+    const pGridLeft = 12;
     for (let i = 0; i < PACKS.length; i++) {
       const pk = PACKS[i];
       const cardX = pGridLeft, cardY = gridTop + i * (PCARD_H + GAP);
