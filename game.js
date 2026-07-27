@@ -2819,7 +2819,7 @@ function isOverButton(x, y) {
   const hit = b => b && Math.abs(x - b.x) < b.w / 2 && Math.abs(y - b.y) < b.h / 2;
   // Panel screens render in a centered strip — translate x to panel-local coords
   const panelOff = isLandscape ? (CANVAS_W - PORT_W) / 2 : 0;
-  const shopOff  = isLandscape ? (CANVAS_W - shopPanelW()) / 2 : 0;
+  const shopOff  = isLandscape ? (CANVAS_W - Math.min(shopPanelW(), 1100)) / 2 : 0;
   const panelHit = b => b && Math.abs((x - panelOff) - b.x) < b.w / 2 && Math.abs(y - b.y) < b.h / 2;
   const shopHit  = b => b && Math.abs((x - shopOff)  - b.x) < b.w / 2 && Math.abs(y - b.y) < b.h / 2;
   switch (state.screen) {
@@ -3122,7 +3122,7 @@ function handleTap(x, y) {
     if (Math.abs(x - xBtnX) < 16 && Math.abs(y - xBtnY) < 16) state.dailyChallengeHidden = true;
   }
   if (state.screen === 'shop') {
-    const px = isLandscape ? x - (CANVAS_W - shopPanelW()) / 2 : x;
+    const px = isLandscape ? x - (CANVAS_W - Math.min(shopPanelW(), 1100)) / 2 : x;
     for (const btn of shopButtons) {
       if (Math.abs(px - btn.x) < btn.w / 2 && Math.abs(y - btn.y) < btn.h / 2) {
         if (btn.action === 'back')  { state.screen = 'start'; state.customPackCreate = null; break; }
@@ -3489,33 +3489,38 @@ function withPortraitPanel(fn) {
 
 // Shop uses a wider panel in landscape (up to 800px vs 390px for other panels)
 function shopPanelW() {
-  return isLandscape ? Math.min(CANVAS_W - 40, 1100) : PORT_W;
+  return isLandscape ? CANVAS_W - 40 : PORT_W;
 }
 
 function withShopPanel(fn) {
   if (!isLandscape) { fn(); return; }
 
-  const PW = shopPanelW();
+  const PW = shopPanelW();          // CANVAS_W - 40 (edge-to-edge minus tiny gap)
   const PX = (CANVAS_W - PW) / 2;
+  const CW = Math.min(PW, 1100);    // content width: capped so it doesn't stretch
+  const CX = (CANVAS_W - CW) / 2;  // content left edge, centered
 
+  // Full-canvas star background so outer areas look like space, not bars
   ctx.fillStyle = 'rgb(2,0,8)';
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
   for (const s of starsFar) {
     ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
     ctx.fillStyle = `rgba(200,210,255,${s.alpha * 0.5})`; ctx.fill();
   }
+
+  // Subtle border lines at the content edges (only visible when content < panel width)
   ctx.strokeStyle = 'rgba(100,80,220,0.35)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(PX, 0); ctx.lineTo(PX, CANVAS_H);
-  ctx.moveTo(PX + PW, 0); ctx.lineTo(PX + PW, CANVAS_H);
+  ctx.moveTo(CX, 0); ctx.lineTo(CX, CANVAS_H);
+  ctx.moveTo(CX + CW, 0); ctx.lineTo(CX + CW, CANVAS_H);
   ctx.stroke();
 
   ctx.save();
   ctx.beginPath(); ctx.rect(PX, 0, PW, CANVAS_H); ctx.clip();
-  ctx.translate(PX, 0);
+  ctx.translate(CX, 0);
   const savedW = CANVAS_W;
-  CANVAS_W = PW;
+  CANVAS_W = CW;
   fn();
   CANVAS_W = savedW;
   ctx.restore();
@@ -7251,8 +7256,8 @@ function drawStartScreenDesktop() {
   }
 
   // ── CENTER: rocket on launchpad + LAUNCH button ──
-  const rocketCY = CANVAS_H * 0.72;
-  drawRocket(CX, rocketCY - 37);
+  // Pad surface is hardcoded at Y=652 in drawDayScene; rocket fin-bottom sits there
+  drawRocket(CX, 598);
 
   // LAUNCH ROCKET button
   {
