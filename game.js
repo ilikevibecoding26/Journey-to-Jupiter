@@ -5430,8 +5430,8 @@ function drawShopScreen() {
   const tabs = [
     { id: 'rockets',     label: '🚀',        x: tabStartX + TAB_W * 0.5,                 y: TAB_Y + TAB_H / 2 },
     { id: 'tails',       label: '🔥',        x: tabStartX + TAB_W * 1.5 + TAB_GAP,       y: TAB_Y + TAB_H / 2 },
-    { id: 'backgrounds', label: '🌌',        x: tabStartX + TAB_W * 2.5 + TAB_GAP * 2,   y: TAB_Y + TAB_H / 2 },
-    { id: 'meteors',     label: '☄️',        x: tabStartX + TAB_W * 3.5 + TAB_GAP * 3,   y: TAB_Y + TAB_H / 2 },
+    { id: 'meteors',     label: '☄️',        x: tabStartX + TAB_W * 2.5 + TAB_GAP * 2,   y: TAB_Y + TAB_H / 2 },
+    { id: 'backgrounds', label: '🌌',        x: tabStartX + TAB_W * 3.5 + TAB_GAP * 3,   y: TAB_Y + TAB_H / 2 },
     { id: 'packs',       label: '⭐ PACKS',  x: tabStartX + TAB_W * 4.5 + TAB_GAP * 4,   y: TAB_Y + TAB_H / 2 },
   ];
   for (const tab of tabs) {
