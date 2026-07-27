@@ -3489,7 +3489,7 @@ function withPortraitPanel(fn) {
 
 // Shop uses a wider panel in landscape (up to 800px vs 390px for other panels)
 function shopPanelW() {
-  return isLandscape ? CANVAS_W - 40 : PORT_W;
+  return isLandscape ? Math.min(CANVAS_W - 40, 1100) : PORT_W;
 }
 
 function withShopPanel(fn) {
