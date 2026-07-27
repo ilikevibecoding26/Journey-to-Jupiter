@@ -4642,25 +4642,22 @@ function drawVipScreen() {
     const owned    = state.unlockedPacks.includes(pk.id);
     const daysLeft = (!owned && vipActive) ? (daysUntilVipWeek(pk.vipMonth) ?? 0) : null;
 
-    // Background preview (clipped to top 65% of card)
+    // Background preview (owned only) or solid dark for locked
     ctx.save();
     ctx.beginPath(); ctx.roundRect(cardX, cardY, CW, CH * 0.65, [10, 10, 0, 0]); ctx.clip();
-    ctx.save();
-    ctx.translate(cardX, cardY);
-    ctx.scale(CW / CANVAS_W, (CH * 0.65) / CANVAS_H);
-    pk.drawBg();
-    ctx.restore();
-    ctx.restore();
-
-    // Lock overlay for unowned packs
-    if (!owned) {
+    if (owned) {
       ctx.save();
-      ctx.beginPath(); ctx.roundRect(cardX, cardY, CW, CH * 0.65, [10, 10, 0, 0]); ctx.clip();
-      ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(cardX, cardY, CW, CH * 0.65);
-      ctx.font = '24px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('🔒', cardX + CW / 2, cardY + CH * 0.32);
+      ctx.translate(cardX, cardY);
+      ctx.scale(CW / CANVAS_W, (CH * 0.65) / CANVAS_H);
+      pk.drawBg();
       ctx.restore();
+    } else {
+      ctx.fillStyle = '#0a0010'; ctx.fillRect(cardX, cardY, CW, CH * 0.65);
+      ctx.font = '24px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.fillText('🔒', cardX + CW / 2, cardY + CH * 0.32);
     }
+    ctx.restore();
 
     // Bottom name band
     ctx.beginPath(); ctx.roundRect(cardX, cardY + CH * 0.65, CW, CH * 0.35, [0, 0, 10, 10]);
