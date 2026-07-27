@@ -5600,7 +5600,7 @@ function drawShopScreen() {
       ctx.fill();
       ctx.strokeStyle = isEquipped ? '#ffd700' : (isOwned ? 'rgba(80,80,160,0.6)' : 'rgba(50,50,80,0.4)');
       ctx.lineWidth = isEquipped ? 2 : 1; ctx.stroke();
-      // Mini previews: bg + rocket (hidden for unowned VIP packs)
+      // Gameplay preview (locked VIP packs show a dark placeholder)
       ctx.save(); ctx.beginPath(); ctx.roundRect(cardX+6, cardY+6, PCARD_W*0.38, PCARD_H-12, 10); ctx.clip();
       if (pk.vip && !isOwned) {
         ctx.fillStyle = '#0a0010'; ctx.fillRect(cardX+6, cardY+6, PCARD_W*0.38, PCARD_H-12);
@@ -5608,14 +5608,29 @@ function drawShopScreen() {
         ctx.fillStyle = 'rgba(255,255,255,0.15)';
         ctx.fillText('🔒', cardX+6 + PCARD_W*0.19, cardY + PCARD_H/2);
       } else {
-        ctx.save(); ctx.translate(cardX+6, cardY+6); ctx.scale((PCARD_W*0.38)/CANVAS_W, (PCARD_H-12)/CANVAS_H);
-        pk.drawBg(); ctx.restore();
+        // Scaled game-coordinate space: draw full scene inside the preview box
+        ctx.save();
+        ctx.translate(cardX+6, cardY+6);
+        ctx.scale((PCARD_W*0.38)/CANVAS_W, (PCARD_H-12)/CANVAS_H);
+        // Background
+        pk.drawBg();
+        // Three animated meteors scrolling down (offsets spread across card)
+        const t = gameTime;
+        const previewMs = [
+          { x:  70, y: (t*110 +   0) % (CANVAS_H+50) - 25, rx:14, ry:14, rotation: 0.5,  type:'normal'  },
+          { x: 300, y: (t* 80 + 320) % (CANVAS_H+50) - 25, rx:20, ry:20, rotation:-0.25, type:'giant'   },
+          { x: 175, y: (t*155 + 640) % (CANVAS_H+50) - 25, rx: 9, ry: 9, rotation: 0.9,  type:'speeder' },
+        ];
+        for (const m of previewMs) pk.drawMeteor(m);
+        // Rocket + trail — positioned center-right of the preview
+        const rX = CANVAS_W * 0.54, rY = CANVAS_H * 0.66;
+        const N = 28; const tb = new Float32Array(N * 2);
+        for (let j=0; j<N; j++) { tb[j*2]=rX; tb[j*2+1]=rY+16+(j/N)*100; }
+        pk.drawTail(tb, 22, 8);
+        pk.drawRocket(rX, rY);
+        ctx.restore();
       }
       ctx.restore();
-      // Mini rocket (hidden for unowned VIP packs)
-      if (!pk.vip || isOwned) {
-        ctx.save(); ctx.translate(cx - PCARD_W*0.12, cy - 5); ctx.scale(0.38, 0.38); pk.drawRocket(0, 0); ctx.restore();
-      }
       // Pack name
       ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(pk.emoji + ' ' + pk.name, cx + PCARD_W*0.18, cardY + PCARD_H * 0.30, PCARD_W * 0.58);
