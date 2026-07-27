@@ -2033,6 +2033,26 @@ function drawMeteorVoid(m){
   ctx.fillStyle='rgba(200,150,255,0.8)';ctx.beginPath();ctx.arc(-r*.25,-r*.3,r*.12,0,Math.PI*2);ctx.fill();
   ctx.restore();
 }
+function drawMeteorAlien(m){
+  ctx.save();ctx.translate(m.x,m.y);ctx.rotate(m.rotation);
+  const r=m.rx;
+  // Outer energy glow
+  const glow=ctx.createRadialGradient(0,0,r*.3,0,0,r*1.7);
+  glow.addColorStop(0,'rgba(40,255,80,0.28)');glow.addColorStop(1,'rgba(0,160,40,0)');
+  ctx.fillStyle=glow;ctx.beginPath();ctx.arc(0,0,r*1.7,0,Math.PI*2);ctx.fill();
+  // Rocky body — dark with green light
+  const bg=ctx.createRadialGradient(-r*.3,-r*.3,1,0,0,r*1.2);
+  bg.addColorStop(0,'#70e040');bg.addColorStop(0.4,'#186600');bg.addColorStop(1,'#041800');
+  ctx.beginPath();ctx.ellipse(0,0,m.rx,m.ry,0,0,Math.PI*2);ctx.fillStyle=bg;ctx.fill();
+  ctx.strokeStyle='rgba(80,255,60,0.45)';ctx.lineWidth=1;ctx.stroke();
+  // Bioluminescent spots
+  ctx.fillStyle='rgba(140,255,90,0.9)';
+  ctx.beginPath();ctx.arc(-r*.28,-r*.22,r*.15,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(80,255,100,0.65)';
+  ctx.beginPath();ctx.arc(r*.22,r*.18,r*.1,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(-r*.06,r*.3,r*.08,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
 
 // ── PACKS ARRAY ───────────────────────────────────────
 const PACKS=[
@@ -2093,6 +2113,7 @@ const METEORS=[
   {id:'ice',             name:'ICE',        cost:16, drawFn:drawMeteorIce    },
   {id:'gold',            name:'GOLD',       cost:24, drawFn:drawMeteorGold   },
   {id:'void',            name:'VOID',       cost:32, drawFn:drawMeteorVoid   },
+  {id:'alien',           name:'ALIEN',      cost:20, drawFn:drawMeteorAlien  },
   // Pack meteors — unlocked via pack purchase
   {id:'abyss_meteor',    name:'ABYSS',      cost:0, packId:'abyss',    drawFn:drawPackMeteorAbyss   },
   {id:'sakura_meteor',   name:'SAKURA',     cost:0, packId:'sakura',   drawFn:drawPackMeteorSakura  },
