@@ -5443,14 +5443,22 @@ function drawShopScreen() {
       ctx.fill();
       ctx.strokeStyle = isEquipped ? '#ffd700' : (isOwned ? 'rgba(80,80,160,0.6)' : 'rgba(50,50,80,0.4)');
       ctx.lineWidth = isEquipped ? 2 : 1; ctx.stroke();
-      // Mini previews: bg + rocket + meteor sample
+      // Mini previews: bg + rocket (hidden for unowned VIP packs)
       ctx.save(); ctx.beginPath(); ctx.roundRect(cardX+6, cardY+6, PCARD_W*0.38, PCARD_H-12, 10); ctx.clip();
-      // Scale down and draw bg preview
-      ctx.save(); ctx.translate(cardX+6, cardY+6); ctx.scale((PCARD_W*0.38)/CANVAS_W, (PCARD_H-12)/CANVAS_H);
-      pk.drawBg(); ctx.restore();
+      if (pk.vip && !isOwned) {
+        ctx.fillStyle = '#0a0010'; ctx.fillRect(cardX+6, cardY+6, PCARD_W*0.38, PCARD_H-12);
+        ctx.font = '32px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.fillText('🔒', cardX+6 + PCARD_W*0.19, cardY + PCARD_H/2);
+      } else {
+        ctx.save(); ctx.translate(cardX+6, cardY+6); ctx.scale((PCARD_W*0.38)/CANVAS_W, (PCARD_H-12)/CANVAS_H);
+        pk.drawBg(); ctx.restore();
+      }
       ctx.restore();
-      // Mini rocket
-      ctx.save(); ctx.translate(cx - PCARD_W*0.12, cy - 5); ctx.scale(0.38, 0.38); pk.drawRocket(0, 0); ctx.restore();
+      // Mini rocket (hidden for unowned VIP packs)
+      if (!pk.vip || isOwned) {
+        ctx.save(); ctx.translate(cx - PCARD_W*0.12, cy - 5); ctx.scale(0.38, 0.38); pk.drawRocket(0, 0); ctx.restore();
+      }
       // Pack name
       ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(pk.emoji + ' ' + pk.name, cx + PCARD_W*0.18, cardY + PCARD_H * 0.30, PCARD_W * 0.58);
