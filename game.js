@@ -1958,6 +1958,82 @@ function drawPackMeteorNeonCity(m){
   ctx.restore();
 }
 
+// ── STANDALONE METEOR SKINS ──────────────────────────
+function drawMeteorClassic(m){
+  ctx.save();ctx.translate(m.x,m.y);ctx.rotate(m.rotation);
+  const isSpeeder=m.type==='speeder',isGiant=m.type==='giant';
+  const trailColor=isSpeeder?'rgba(160,220,255,':'rgba(255,180,80,';
+  const bodyHi=isSpeeder?'#9ab8d0':isGiant?'#6a3820':'#7a6050';
+  const bodyMid=isSpeeder?'#607090':isGiant?'#4a2210':'#5a4030';
+  const bodyLo=isSpeeder?'#304060':isGiant?'#2a1008':'#3a2818';
+  const trailLen=m.ry*(isSpeeder?7:isGiant?2.5:4);
+  const trail=ctx.createLinearGradient(0,-trailLen,0,0);
+  trail.addColorStop(0,trailColor+'0)');trail.addColorStop(1,trailColor+(isSpeeder?'0.55)':'0.35)'));
+  ctx.beginPath();ctx.ellipse(0,-trailLen/2,m.rx*0.5,trailLen/2,0,0,Math.PI*2);ctx.fillStyle=trail;ctx.fill();
+  const bg=ctx.createRadialGradient(-m.rx*0.3,-m.ry*0.3,1,0,0,m.rx*1.2);
+  bg.addColorStop(0,bodyHi);bg.addColorStop(0.6,bodyMid);bg.addColorStop(1,bodyLo);
+  ctx.beginPath();ctx.ellipse(0,0,m.rx,m.ry,0,0,Math.PI*2);ctx.fillStyle=bg;ctx.fill();
+  if(isSpeeder){ctx.strokeStyle='rgba(120,200,255,0.6)';ctx.lineWidth=1.5;ctx.stroke();}
+  ctx.fillStyle=`rgba(${isGiant?'20,8,2':'30,15,5'},0.55)`;
+  const craters=isGiant?[{cx:-m.rx*.35,cy:-m.ry*.25,cr:m.rx*.2},{cx:m.rx*.3,cy:m.ry*.2,cr:m.rx*.16},{cx:m.rx*.05,cy:m.ry*.4,cr:m.rx*.13}]:[{cx:-m.rx*.3,cy:-m.ry*.2,cr:m.rx*.22},{cx:m.rx*.3,cy:m.ry*.25,cr:m.rx*.18},{cx:-m.rx*.1,cy:m.ry*.35,cr:m.rx*.13}];
+  for(const c of craters){ctx.beginPath();ctx.ellipse(c.cx,c.cy,c.cr,c.cr*0.65,0,0,Math.PI*2);ctx.fill();}
+  ctx.restore();
+}
+function drawMeteorFire(m){
+  ctx.save();ctx.translate(m.x,m.y);ctx.rotate(m.rotation);
+  const r=m.rx;
+  const glow=ctx.createRadialGradient(0,0,r*.2,0,0,r*1.5);
+  glow.addColorStop(0,'rgba(255,200,40,0.3)');glow.addColorStop(1,'rgba(255,50,0,0)');
+  ctx.fillStyle=glow;ctx.beginPath();ctx.arc(0,0,r*1.5,0,Math.PI*2);ctx.fill();
+  const bg=ctx.createRadialGradient(-r*.3,-r*.3,1,0,0,r*1.2);
+  bg.addColorStop(0,'#ff8830');bg.addColorStop(0.5,'#cc2200');bg.addColorStop(1,'#660800');
+  ctx.beginPath();ctx.ellipse(0,0,m.rx,m.ry,0,0,Math.PI*2);ctx.fillStyle=bg;ctx.fill();
+  ctx.strokeStyle='rgba(255,180,0,0.5)';ctx.lineWidth=1;ctx.stroke();
+  ctx.restore();
+}
+function drawMeteorIce(m){
+  ctx.save();ctx.translate(m.x,m.y);ctx.rotate(m.rotation);
+  const r=m.rx;
+  const bg=ctx.createRadialGradient(-r*.3,-r*.3,1,0,0,r*1.2);
+  bg.addColorStop(0,'#d0f0ff');bg.addColorStop(0.4,'#60a8cc');bg.addColorStop(1,'#204060');
+  ctx.beginPath();ctx.ellipse(0,0,m.rx,m.ry,0,0,Math.PI*2);ctx.fillStyle=bg;ctx.fill();
+  ctx.strokeStyle='rgba(200,240,255,0.6)';ctx.lineWidth=0.8;
+  ctx.beginPath();ctx.moveTo(-r*.6,0);ctx.lineTo(r*.6,0);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-r*.6);ctx.lineTo(0,r*.6);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-r*.4,-r*.4);ctx.lineTo(r*.4,r*.4);ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,0.7)';ctx.beginPath();ctx.arc(-r*.25,-r*.25,r*.18,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+function drawMeteorGold(m){
+  ctx.save();ctx.translate(m.x,m.y);ctx.rotate(m.rotation);
+  const r=m.rx;
+  const glow=ctx.createRadialGradient(0,0,r*.3,0,0,r*1.5);
+  glow.addColorStop(0,'rgba(255,220,60,0.25)');glow.addColorStop(1,'rgba(255,180,0,0)');
+  ctx.fillStyle=glow;ctx.beginPath();ctx.arc(0,0,r*1.5,0,Math.PI*2);ctx.fill();
+  const bg=ctx.createRadialGradient(-r*.3,-r*.3,1,0,0,r*1.2);
+  bg.addColorStop(0,'#fff0a0');bg.addColorStop(0.4,'#d4a020');bg.addColorStop(1,'#7a5000');
+  ctx.beginPath();ctx.ellipse(0,0,m.rx,m.ry,0,0,Math.PI*2);ctx.fillStyle=bg;ctx.fill();
+  ctx.strokeStyle='rgba(255,230,80,0.7)';ctx.lineWidth=1;ctx.stroke();
+  ctx.strokeStyle='rgba(255,240,120,0.8)';ctx.lineWidth=0.8;
+  for(let a=0;a<4;a++){const ang=a*Math.PI/4;ctx.beginPath();ctx.moveTo(Math.cos(ang)*r*.6,Math.sin(ang)*r*.6);ctx.lineTo(Math.cos(ang)*r*1.2,Math.sin(ang)*r*1.2);ctx.stroke();}
+  ctx.restore();
+}
+function drawMeteorVoid(m){
+  ctx.save();ctx.translate(m.x,m.y);ctx.rotate(m.rotation);
+  const r=m.rx;
+  const aura=ctx.createRadialGradient(0,0,r*.4,0,0,r*1.6);
+  aura.addColorStop(0,'rgba(120,0,180,0.2)');aura.addColorStop(1,'rgba(60,0,100,0)');
+  ctx.fillStyle=aura;ctx.beginPath();ctx.arc(0,0,r*1.6,0,Math.PI*2);ctx.fill();
+  const bg=ctx.createRadialGradient(-r*.2,-r*.2,1,0,0,r*1.2);
+  bg.addColorStop(0,'#1a0030');bg.addColorStop(0.5,'#08000e');bg.addColorStop(1,'#030008');
+  ctx.beginPath();ctx.ellipse(0,0,m.rx,m.ry,0,0,Math.PI*2);ctx.fillStyle=bg;ctx.fill();
+  const edge=ctx.createRadialGradient(0,0,r*.7,0,0,r);
+  edge.addColorStop(0,'rgba(0,0,0,0)');edge.addColorStop(1,'rgba(160,0,255,0.6)');
+  ctx.fillStyle=edge;ctx.beginPath();ctx.ellipse(0,0,m.rx,m.ry,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(200,150,255,0.8)';ctx.beginPath();ctx.arc(-r*.25,-r*.3,r*.12,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+
 // ── PACKS ARRAY ───────────────────────────────────────
 const PACKS=[
   {id:'abyss',   name:'ABYSS',   emoji:'🌊', cost:800,
@@ -2009,6 +2085,23 @@ const BACKGROUNDS=[
   // Secret easter-egg backgrounds (cost 0, hidden from shop)
   {id:'retrowave',   name:'RETROWAVE', cost:0, secret:true,       drawFn:drawBgRetrowave    },
   {id:'matrix',      name:'MATRIX',    cost:0, secret:true,       drawFn:drawBgMatrix       },
+];
+
+const METEORS=[
+  {id:'classic',         name:'CLASSIC',   cost:0,  drawFn:drawMeteorClassic},
+  {id:'fire',            name:'FIRE',       cost:12, drawFn:drawMeteorFire   },
+  {id:'ice',             name:'ICE',        cost:16, drawFn:drawMeteorIce    },
+  {id:'gold',            name:'GOLD',       cost:24, drawFn:drawMeteorGold   },
+  {id:'void',            name:'VOID',       cost:32, drawFn:drawMeteorVoid   },
+  // Pack meteors — unlocked via pack purchase
+  {id:'abyss_meteor',    name:'ABYSS',      cost:0, packId:'abyss',    drawFn:drawPackMeteorAbyss   },
+  {id:'sakura_meteor',   name:'SAKURA',     cost:0, packId:'sakura',   drawFn:drawPackMeteorSakura  },
+  {id:'crystal_meteor',  name:'CRYSTAL',    cost:0, packId:'crystal',  drawFn:drawPackMeteorCrystal },
+  {id:'glacial_meteor',  name:'GLACIAL',    cost:0, packId:'glacial',  drawFn:drawPackMeteorGlacial },
+  {id:'sports_meteor',   name:'SPORTS',     cost:0, packId:'sports',   drawFn:drawPackMeteorSports  },
+  {id:'royale_meteor',   name:'ROYALE',     cost:0, packId:'royale',   drawFn:drawPackMeteorRoyale  },
+  {id:'neoncity_meteor', name:'NEON CITY',  cost:0, packId:'neoncity', drawFn:drawPackMeteorNeonCity},
+  {id:'candy_meteor',    name:'CANDY',      cost:0, packId:'candy',    drawFn:drawPackMeteorCandy   },
 ];
 
 // ── Tail draw functions ─────────────────────────────────────────────────────
@@ -2266,9 +2359,10 @@ function grantVipPacksForCurrentWeek() {
   for (const p of due) {
     if (up.includes(p.id)) continue;
     up.push(p.id); anyNew = true;
-    const ur = loadUnlocked();      if (!ur.includes(p.id+'_rocket')) { ur.push(p.id+'_rocket'); saveUnlocked(ur);      state.unlockedRockets = ur; }
-    const ut = loadUnlockedTails(); if (!ut.includes(p.id+'_tail'))   { ut.push(p.id+'_tail');   saveUnlockedTails(ut); state.unlockedTails   = ut; }
-    const ub = loadUnlockedBgs();   if (!ub.includes(p.id+'_bg'))     { ub.push(p.id+'_bg');     saveUnlockedBgs(ub);   state.unlockedBgs     = ub; }
+    const ur = loadUnlocked();        if (!ur.includes(p.id+'_rocket')) { ur.push(p.id+'_rocket'); saveUnlocked(ur);        state.unlockedRockets = ur; }
+    const ut = loadUnlockedTails();   if (!ut.includes(p.id+'_tail'))   { ut.push(p.id+'_tail');   saveUnlockedTails(ut);   state.unlockedTails   = ut; }
+    const ub = loadUnlockedBgs();     if (!ub.includes(p.id+'_bg'))     { ub.push(p.id+'_bg');     saveUnlockedBgs(ub);     state.unlockedBgs     = ub; }
+    const um = loadUnlockedMeteors(); if (!um.includes(p.id+'_meteor')) { um.push(p.id+'_meteor'); saveUnlockedMeteors(um); state.unlockedMeteors = um; }
   }
   if (anyNew) {
     saveUnlockedPacks(up); state.unlockedPacks = up;
@@ -2293,6 +2387,18 @@ function loadUnlockedTails() {
 function saveUnlockedTails(arr) { localStorage.setItem('jtj_unlocked_tails', JSON.stringify(arr)); }
 function loadEquippedTail()     { return localStorage.getItem('jtj_equipped_tail') || 'classic'; }
 function saveEquippedTail(id)   { localStorage.setItem('jtj_equipped_tail', id); }
+function loadEquippedMeteor()   {
+  const saved = localStorage.getItem('jtj_equipped_meteor');
+  if (saved) return saved;
+  const pack = loadEquippedPack(); // migrate from old pack-tied system
+  return pack ? pack + '_meteor' : 'classic';
+}
+function saveEquippedMeteor(id) { localStorage.setItem('jtj_equipped_meteor', id); }
+function loadUnlockedMeteors()  {
+  try { return JSON.parse(localStorage.getItem('jtj_unlocked_meteors') || '["classic"]'); }
+  catch { return ['classic']; }
+}
+function saveUnlockedMeteors(arr) { localStorage.setItem('jtj_unlocked_meteors', JSON.stringify(arr)); }
 
 
 // Hit areas rebuilt on every shop frame draw
@@ -2352,6 +2458,10 @@ function loadProfileIntoSession(idx) {
   saveUnlockedPacks(p.unlockedPacks || []);
   state.unlockedPacks   = loadUnlockedPacks();
   state.equippedPack    = loadEquippedPack();
+  saveEquippedMeteor(p.equippedMeteor || loadEquippedMeteor());
+  saveUnlockedMeteors(p.unlockedMeteors && p.unlockedMeteors.length ? p.unlockedMeteors : ['classic']);
+  state.unlockedMeteors = loadUnlockedMeteors();
+  state.equippedMeteor  = loadEquippedMeteor();
   state.lastSpinDate    = p.lastSpinDate || '';
   // Load ghost time for popup display
   const gr = loadGhostRun();
@@ -2372,6 +2482,8 @@ function saveCurrentProfileData() {
     unlockedBgs:     loadUnlockedBgs(),
     equippedPack:    loadEquippedPack(),
     unlockedPacks:   loadUnlockedPacks(),
+    equippedMeteor:  loadEquippedMeteor(),
+    unlockedMeteors: loadUnlockedMeteors(),
     leaderboard:     loadLeaderboard(),
     lastSpinDate:    state.lastSpinDate || '',
   };
@@ -2449,8 +2561,10 @@ const state = {
   equippedTail:    loadEquippedTail  ? loadEquippedTail()  : 'classic',
   unlockedBgs:     loadUnlockedBgs   ? loadUnlockedBgs()   : ['classic'],
   equippedBg:      loadEquippedBg    ? loadEquippedBg()    : 'classic',
-  unlockedPacks:   loadUnlockedPacks ? loadUnlockedPacks() : [],
-  equippedPack:    loadEquippedPack  ? loadEquippedPack()  : null,
+  unlockedPacks:   loadUnlockedPacks   ? loadUnlockedPacks()   : [],
+  equippedPack:    loadEquippedPack    ? loadEquippedPack()    : null,
+  unlockedMeteors: loadUnlockedMeteors ? loadUnlockedMeteors() : ['classic'],
+  equippedMeteor:  loadEquippedMeteor  ? loadEquippedMeteor()  : 'classic',
   level: 1,
   lives: 3,
   rocket: { x: CANVAS_W / 2, y: CANVAS_H * 0.75, vx: 0, hitTimer: 0 },
@@ -3034,12 +3148,29 @@ function handleTap(x, y) {
           saveCurrentProfileData();
           break;
         }
+        if (btn.action === 'equip_meteor') {
+          state.equippedMeteor = btn.id;
+          saveEquippedMeteor(btn.id);
+          saveCurrentProfileData();
+          break;
+        }
+        if (btn.action === 'unlock_meteor' && btn.canAfford) {
+          state.coins -= btn.cost;
+          saveCoins(state.coins);
+          const um = loadUnlockedMeteors(); um.push(btn.id); saveUnlockedMeteors(um);
+          state.unlockedMeteors = loadUnlockedMeteors();
+          state.equippedMeteor  = btn.id;
+          saveEquippedMeteor(btn.id);
+          saveCurrentProfileData();
+          break;
+        }
         if (btn.action === 'equip_pack') {
           // Equip all pack items at once as a shortcut, but they can be changed individually
           saveEquipped(btn.id+'_rocket'); state.equippedRocket = btn.id+'_rocket';
           saveEquippedTail(btn.id+'_tail'); state.equippedTail = btn.id+'_tail';
           saveEquippedBg(btn.id+'_bg'); state.equippedBg = btn.id+'_bg';
-          state.equippedPack = btn.id; // keep for backward compat / meteor only
+          saveEquippedMeteor(btn.id+'_meteor'); state.equippedMeteor = btn.id+'_meteor';
+          state.equippedPack = btn.id;
           saveEquippedPack(btn.id);
           saveCurrentProfileData(); break;
         }
@@ -3052,6 +3183,7 @@ function handleTap(x, y) {
           const ur = loadUnlocked(); ur.push(btn.id+'_rocket'); saveUnlocked(ur); state.unlockedRockets = ur;
           const ut = loadUnlockedTails(); ut.push(btn.id+'_tail'); saveUnlockedTails(ut); state.unlockedTails = ut;
           const ub = loadUnlockedBgs(); ub.push(btn.id+'_bg'); saveUnlockedBgs(ub); state.unlockedBgs = ub;
+          const um = loadUnlockedMeteors(); um.push(btn.id+'_meteor'); saveUnlockedMeteors(um); state.unlockedMeteors = um;
           saveCurrentProfileData(); break;
         }
       }
@@ -5257,6 +5389,7 @@ function shopContentHeight() {
   const CARD_H=132,GAP=7,PCARD_H=148;
   if (state.shopTab==='rockets')     return Math.ceil(ROCKETS.length/2)*(CARD_H+GAP)-GAP;
   if (state.shopTab==='tails')       return Math.ceil(TAILS.length/2)*(CARD_H+GAP)-GAP;
+  if (state.shopTab==='meteors')     return Math.ceil(METEORS.length/2)*(CARD_H+GAP)-GAP;
   if (state.shopTab==='backgrounds') {
     const vis = BACKGROUNDS.filter(b => !b.wheelOnly && (!b.secret || state.unlockedBgs.includes(b.id)));
     return Math.ceil(vis.length/2)*(CARD_H+GAP)-GAP;
@@ -5291,14 +5424,15 @@ function drawShopScreen() {
   ctx.fillText(`🪙 ${state.coins}  coins available`, CANVAS_W / 2, 54, CANVAS_W - 40);
 
   // ── Tabs ──────────────────────────────────────────────
-  const TAB_Y = 70, TAB_H = 32, TAB_W = 88, TAB_GAP = 5;
-  const tabTotalW = 4 * TAB_W + 3 * TAB_GAP;
+  const TAB_Y = 70, TAB_H = 32, TAB_W = 72, TAB_GAP = 4;
+  const tabTotalW = 5 * TAB_W + 4 * TAB_GAP;
   const tabStartX = (CANVAS_W - tabTotalW) / 2;
   const tabs = [
-    { id: 'rockets',     label: '🚀',     x: tabStartX + TAB_W * 0.5,                   y: TAB_Y + TAB_H / 2 },
-    { id: 'tails',       label: '🔥',     x: tabStartX + TAB_W * 1.5 + TAB_GAP,         y: TAB_Y + TAB_H / 2 },
-    { id: 'backgrounds', label: '🌌',     x: tabStartX + TAB_W * 2.5 + TAB_GAP * 2,     y: TAB_Y + TAB_H / 2 },
-    { id: 'packs',       label: '⭐ PACKS', x: tabStartX + TAB_W * 3.5 + TAB_GAP * 3,   y: TAB_Y + TAB_H / 2 },
+    { id: 'rockets',     label: '🚀',        x: tabStartX + TAB_W * 0.5,                 y: TAB_Y + TAB_H / 2 },
+    { id: 'tails',       label: '🔥',        x: tabStartX + TAB_W * 1.5 + TAB_GAP,       y: TAB_Y + TAB_H / 2 },
+    { id: 'backgrounds', label: '🌌',        x: tabStartX + TAB_W * 2.5 + TAB_GAP * 2,   y: TAB_Y + TAB_H / 2 },
+    { id: 'meteors',     label: '☄️',        x: tabStartX + TAB_W * 3.5 + TAB_GAP * 3,   y: TAB_Y + TAB_H / 2 },
+    { id: 'packs',       label: '⭐ PACKS',  x: tabStartX + TAB_W * 4.5 + TAB_GAP * 4,   y: TAB_Y + TAB_H / 2 },
   ];
   for (const tab of tabs) {
     const active = state.shopTab === tab.id;
@@ -5422,6 +5556,29 @@ function drawShopScreen() {
       drawCard(cx, cy, cardX, cardY, isOwned, isEquipped, canAfford, b.name, b.cost,
         () => { if (!packLockLabel) drawBgPreview(b.id, cardX+8, cardY+8, CARD_W*0.48, CARD_H*0.52); },
         isOwned ? 'equip_bg' : 'unlock_bg', b.id, packLockLabel);
+    }
+  } else if (state.shopTab === 'meteors') {
+    const unlocked = state.unlockedMeteors, equipped = state.equippedMeteor;
+    for (let i = 0; i < METEORS.length; i++) {
+      const mr = METEORS[i], col = i%2, row = Math.floor(i/2);
+      const cx = gridLeft + col*(CARD_W+GAP) + CARD_W/2, cy = gridTop + row*(CARD_H+GAP) + CARD_H/2;
+      const cardX = cx-CARD_W/2, cardY = cy-CARD_H/2;
+      const isOwned = mr.packId ? state.unlockedPacks.includes(mr.packId) : unlocked.includes(mr.id);
+      const isEquipped = equipped === mr.id;
+      const canAfford = state.coins >= mr.cost;
+      let packLockLabel = null;
+      if (mr.packId && !state.unlockedPacks.includes(mr.packId)) {
+        const packDef = PACKS.find(p => p.id === mr.packId);
+        packLockLabel = '🔒 ' + (packDef ? packDef.name : mr.packId.toUpperCase()) + ' PACK';
+      }
+      drawCard(cx, cy, cardX, cardY, isOwned, isEquipped, canAfford, mr.name, mr.cost,
+        () => {
+          if (!packLockLabel) {
+            const pm = { x: 0, y: 0, rotation: 0.4, rx: 16, ry: 16, type: 'normal' };
+            ctx.save(); ctx.translate(cx - CARD_W*0.12, cy + 4); mr.drawFn(pm); ctx.restore();
+          }
+        },
+        isOwned ? 'equip_meteor' : 'unlock_meteor', mr.id, packLockLabel);
     }
   } else if (state.shopTab === 'packs') {
     // ── Packs grid — 1 column, tall cards ──────────────
@@ -8384,65 +8541,9 @@ function drawCollectibleStar(s) {
 
 // ── Draw a meteor ─────────────────────────────
 function drawMeteor(m) {
-  // Meteor skin follows the equipped rocket's pack
-  const pk = PACKS.find(p => state.equippedRocket === p.id + '_rocket');
-  if (pk) { pk.drawMeteor(m); return; }
-  ctx.save();
-  ctx.translate(m.x, m.y);
-  ctx.rotate(m.rotation);
-
-  // Type-specific colours
-  const isSpeeder = m.type === 'speeder';
-  const isGiant   = m.type === 'giant';
-  const trailColor = isSpeeder ? 'rgba(160, 220, 255,' : isGiant ? 'rgba(255, 120, 40,' : 'rgba(255, 180, 80,';
-  const bodyHi     = isSpeeder ? '#9ab8d0' : isGiant ? '#6a3820' : '#7a6050';
-  const bodyMid    = isSpeeder ? '#607090' : isGiant ? '#4a2210' : '#5a4030';
-  const bodyLo     = isSpeeder ? '#304060' : isGiant ? '#2a1008' : '#3a2818';
-
-  // Streak trail (longer for speeders)
-  const trailLen = m.ry * (isSpeeder ? 7 : isGiant ? 2.5 : 4);
-  const trail = ctx.createLinearGradient(0, -trailLen, 0, 0);
-  trail.addColorStop(0, trailColor + ' 0)');
-  trail.addColorStop(1, trailColor + (isSpeeder ? ' 0.55)' : ' 0.35)'));
-  ctx.beginPath();
-  ctx.ellipse(0, -trailLen / 2, m.rx * 0.5, trailLen / 2, 0, 0, Math.PI * 2);
-  ctx.fillStyle = trail;
-  ctx.fill();
-
-  // Rocky body
-  const bodyGrad = ctx.createRadialGradient(-m.rx * 0.3, -m.ry * 0.3, 1, 0, 0, m.rx * 1.2);
-  bodyGrad.addColorStop(0,   bodyHi);
-  bodyGrad.addColorStop(0.6, bodyMid);
-  bodyGrad.addColorStop(1,   bodyLo);
-  ctx.beginPath();
-  ctx.ellipse(0, 0, m.rx, m.ry, 0, 0, Math.PI * 2);
-  ctx.fillStyle = bodyGrad;
-  ctx.fill();
-
-  // Speed glow outline for speeders
-  if (isSpeeder) {
-    ctx.strokeStyle = 'rgba(120, 200, 255, 0.6)';
-    ctx.lineWidth   = 1.5;
-    ctx.stroke();
-  }
-
-  // Craters (giants get more)
-  ctx.fillStyle = `rgba(${isGiant ? '20,8,2' : '30,15,5'}, 0.55)`;
-  const craters = isGiant
-    ? [ { cx: -m.rx*0.35, cy: -m.ry*0.25, cr: m.rx*0.2 },
-        { cx:  m.rx*0.3,  cy:  m.ry*0.2,  cr: m.rx*0.16 },
-        { cx:  m.rx*0.05, cy:  m.ry*0.4,  cr: m.rx*0.13 },
-        { cx: -m.rx*0.15, cy:  m.ry*0.1,  cr: m.rx*0.1  }, ]
-    : [ { cx: -m.rx*0.3,  cy: -m.ry*0.2,  cr: m.rx*0.22 },
-        { cx:  m.rx*0.3,  cy:  m.ry*0.25, cr: m.rx*0.18 },
-        { cx: -m.rx*0.1,  cy:  m.ry*0.35, cr: m.rx*0.13 }, ];
-  for (const c of craters) {
-    ctx.beginPath();
-    ctx.ellipse(c.cx, c.cy, c.cr, c.cr * 0.65, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  ctx.restore();
+  const mr = METEORS.find(x => x.id === state.equippedMeteor);
+  if (mr) { mr.drawFn(m); return; }
+  drawMeteorClassic(m);
 }
 
 // ── Kick things off ───────────────────────────
