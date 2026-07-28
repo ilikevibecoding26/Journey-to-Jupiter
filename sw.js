@@ -1,5 +1,5 @@
 // Service Worker — v3 (network-first for core files, cache for offline fallback)
-const CACHE_NAME = 'journey-to-jupiter-v37';
+const CACHE_NAME = 'journey-to-jupiter-v38';
 
 const FILES_TO_CACHE = [
   '/',

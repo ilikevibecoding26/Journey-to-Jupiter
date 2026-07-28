@@ -2072,38 +2072,70 @@ const PACKS=[
   {id:'candy',   name:'CANDY',   emoji:'🍬',cost:0, vip:true, vipMonth:3,
     drawRocket:drawPackRocketCandy,    drawTail:drawPackTailCandy,
     drawBg:drawPackBgCandy,            drawMeteor:drawPackMeteorCandy},
-  {id:'christmas', name:'CHRISTMAS', emoji:'🎄', cost:0, seasonal:true, seasonMonth:12, seasonDay:1,
-    drawRocket:drawPackRocketChristmas, drawTail:drawPackTailChristmas,
-    drawBg:drawPackBgChristmas,         drawMeteor:drawPackMeteorChristmas},
+  {id:'christmas',    name:'CHRISTMAS',    emoji:'🎄', cost:0, season:{start:{month:12,day:1},end:{month:12,day:31}},
+    drawRocket:drawPackRocketChristmas,    drawTail:drawPackTailChristmas,
+    drawBg:drawPackBgChristmas,            drawMeteor:drawPackMeteorChristmas},
+  {id:'halloween',    name:'HALLOWEEN',    emoji:'🎃', cost:0, season:{start:{month:10,day:1},end:{month:10,day:31}},
+    drawRocket:drawPackRocketHalloween,    drawTail:drawPackTailHalloween,
+    drawBg:drawPackBgHalloween,            drawMeteor:drawPackMeteorHalloween},
+  {id:'valentines',   name:"VALENTINE'S",  emoji:'💘', cost:0, season:{start:{month:2,day:1},end:{month:2,day:28}},
+    drawRocket:drawPackRocketValentines,   drawTail:drawPackTailValentines,
+    drawBg:drawPackBgValentines,           drawMeteor:drawPackMeteorValentines},
+  {id:'newyear',      name:"NEW YEAR'S",   emoji:'🎆', cost:0, season:{start:{month:1,day:1},end:{month:1,day:31}},
+    drawRocket:drawPackRocketNewYear,      drawTail:drawPackTailNewYear,
+    drawBg:drawPackBgNewYear,              drawMeteor:drawPackMeteorNewYear},
+  {id:'stpatricks',   name:"ST. PATRICK'S",emoji:'🍀', cost:0, season:{start:{month:3,day:1},end:{month:3,day:31}},
+    drawRocket:drawPackRocketStPatricks,   drawTail:drawPackTailStPatricks,
+    drawBg:drawPackBgStPatricks,           drawMeteor:drawPackMeteorStPatricks},
+  {id:'fourthofjuly', name:'4TH OF JULY',  emoji:'🎆', cost:0, season:{start:{month:7,day:1},end:{month:7,day:31}},
+    drawRocket:drawPackRocketFourthOfJuly, drawTail:drawPackTailFourthOfJuly,
+    drawBg:drawPackBgFourthOfJuly,         drawMeteor:drawPackMeteorFourthOfJuly},
 ];
 
-function visiblePacks() {
+function isInSeason(p) {
+  if (!p.season) return false;
   const now = new Date();
   const m = now.getMonth() + 1, d = now.getDate();
+  const { start, end } = p.season;
+  const afterStart = (m > start.month) || (m === start.month && d >= start.day);
+  const beforeEnd  = (m < end.month)   || (m === end.month   && d <= end.day);
+  return afterStart && beforeEnd;
+}
+function visiblePacks() {
   return PACKS.filter(p => {
-    if (!p.seasonal) return true;
-    const unlocked = (typeof state !== 'undefined') && state.unlockedPacks && state.unlockedPacks.includes(p.id);
-    if (unlocked) return true;
-    return (m > p.seasonMonth) || (m === p.seasonMonth && d >= p.seasonDay);
+    if (!p.season) return true;
+    const owned = typeof state !== 'undefined' && state.unlockedPacks && state.unlockedPacks.includes(p.id);
+    return owned || isInSeason(p);
   });
 }
 function checkSeasonalUnlocks() {
-  const now = new Date();
-  const m = now.getMonth() + 1, d = now.getDate();
+  let changed = false;
   for (const p of PACKS) {
-    if (!p.seasonal) continue;
-    const isTime = (m > p.seasonMonth) || (m === p.seasonMonth && d >= p.seasonDay);
-    if (isTime && !state.unlockedPacks.includes(p.id)) {
+    if (!p.season) continue;
+    const inSeason = isInSeason(p);
+    const owned = state.unlockedPacks.includes(p.id);
+    if (inSeason && !owned) {
       state.unlockedPacks = [...state.unlockedPacks, p.id];
-      saveUnlockedPacks(state.unlockedPacks);
-      // Also unlock the individual items
-      const ur = loadUnlocked(); if (!ur.includes(p.id+'_rocket')) { ur.push(p.id+'_rocket'); saveUnlocked(ur); state.unlockedRockets = ur; }
-      const ut = loadUnlockedTails(); if (!ut.includes(p.id+'_tail')) { ut.push(p.id+'_tail'); saveUnlockedTails(ut); state.unlockedTails = ut; }
-      const ub = loadUnlockedBgs(); if (!ub.includes(p.id+'_bg')) { ub.push(p.id+'_bg'); saveUnlockedBgs(ub); state.unlockedBgs = ub; }
-      const um = loadUnlockedMeteors(); if (!um.includes(p.id+'_meteor')) { um.push(p.id+'_meteor'); saveUnlockedMeteors(um); state.unlockedMeteors = um; }
-      saveCurrentProfileData();
+      const ur=loadUnlocked();       if(!ur.includes(p.id+'_rocket')){ur.push(p.id+'_rocket');saveUnlocked(ur);state.unlockedRockets=ur;}
+      const ut=loadUnlockedTails();  if(!ut.includes(p.id+'_tail'))  {ut.push(p.id+'_tail');  saveUnlockedTails(ut);state.unlockedTails=ut;}
+      const ub=loadUnlockedBgs();    if(!ub.includes(p.id+'_bg'))    {ub.push(p.id+'_bg');    saveUnlockedBgs(ub);state.unlockedBgs=ub;}
+      const um=loadUnlockedMeteors();if(!um.includes(p.id+'_meteor')){um.push(p.id+'_meteor');saveUnlockedMeteors(um);state.unlockedMeteors=um;}
+      changed = true;
+    } else if (!inSeason && owned) {
+      state.unlockedPacks = state.unlockedPacks.filter(id => id !== p.id);
+      const ur=loadUnlocked().filter(id=>id!==p.id+'_rocket');saveUnlocked(ur);state.unlockedRockets=ur;
+      const ut=loadUnlockedTails().filter(id=>id!==p.id+'_tail');saveUnlockedTails(ut);state.unlockedTails=ut;
+      const ub=loadUnlockedBgs().filter(id=>id!==p.id+'_bg');saveUnlockedBgs(ub);state.unlockedBgs=ub;
+      const um=loadUnlockedMeteors().filter(id=>id!==p.id+'_meteor');saveUnlockedMeteors(um);state.unlockedMeteors=um;
+      if(state.equippedRocket===p.id+'_rocket'){state.equippedRocket='explorer';saveEquipped('explorer');}
+      if(state.equippedTail===p.id+'_tail'){state.equippedTail='classic';saveEquippedTail('classic');}
+      if(state.equippedBg===p.id+'_bg'){state.equippedBg='classic';saveEquippedBg('classic');}
+      if(state.equippedMeteor===p.id+'_meteor'){state.equippedMeteor='classic';saveEquippedMeteor('classic');}
+      if(state.equippedPack===p.id){state.equippedPack=null;saveEquippedPack(null);}
+      changed = true;
     }
   }
+  if (changed) { saveUnlockedPacks(state.unlockedPacks); saveCurrentProfileData(); }
 }
 
 const BACKGROUNDS=[
@@ -2126,7 +2158,12 @@ const BACKGROUNDS=[
   {id:'royale_bg',   name:'ROYALE',    cost:0, packId:'royale',   drawFn:drawPackBgRoyale   },
   {id:'neoncity_bg', name:'NEON CITY', cost:0, packId:'neoncity', drawFn:drawPackBgNeonCity },
   {id:'candy_bg',    name:'CANDY',     cost:0, packId:'candy',    drawFn:drawPackBgCandy    },
-  {id:'christmas_bg',name:'CHRISTMAS', cost:0, packId:'christmas',drawFn:drawPackBgChristmas},
+  {id:'christmas_bg',   name:'CHRISTMAS',    cost:0, packId:'christmas',   drawFn:drawPackBgChristmas},
+  {id:'halloween_bg',   name:'HALLOWEEN',    cost:0, packId:'halloween',   drawFn:drawPackBgHalloween},
+  {id:'valentines_bg',  name:"VALENTINE'S",  cost:0, packId:'valentines',  drawFn:drawPackBgValentines},
+  {id:'newyear_bg',     name:"NEW YEAR'S",   cost:0, packId:'newyear',     drawFn:drawPackBgNewYear},
+  {id:'stpatricks_bg',  name:"ST. PATRICK'S",cost:0, packId:'stpatricks',  drawFn:drawPackBgStPatricks},
+  {id:'fourthofjuly_bg',name:'4TH OF JULY',  cost:0, packId:'fourthofjuly',drawFn:drawPackBgFourthOfJuly},
   // Secret easter-egg backgrounds (cost 0, hidden from shop)
   {id:'retrowave',   name:'RETROWAVE', cost:0, secret:true,       drawFn:drawBgRetrowave    },
   {id:'matrix',      name:'MATRIX',    cost:0, secret:true,       drawFn:drawBgMatrix       },
@@ -2148,7 +2185,12 @@ const METEORS=[
   {id:'royale_meteor',   name:'ROYALE',     cost:0, packId:'royale',   drawFn:drawPackMeteorRoyale  },
   {id:'neoncity_meteor', name:'NEON CITY',  cost:0, packId:'neoncity', drawFn:drawPackMeteorNeonCity},
   {id:'candy_meteor',    name:'CANDY',      cost:0, packId:'candy',    drawFn:drawPackMeteorCandy   },
-  {id:'christmas_meteor',name:'CHRISTMAS',  cost:0, packId:'christmas',drawFn:drawPackMeteorChristmas},
+  {id:'christmas_meteor',   name:'CHRISTMAS',    cost:0, packId:'christmas',   drawFn:drawPackMeteorChristmas},
+  {id:'halloween_meteor',   name:'HALLOWEEN',    cost:0, packId:'halloween',   drawFn:drawPackMeteorHalloween},
+  {id:'valentines_meteor',  name:"VALENTINE'S",  cost:0, packId:'valentines',  drawFn:drawPackMeteorValentines},
+  {id:'newyear_meteor',     name:"NEW YEAR'S",   cost:0, packId:'newyear',     drawFn:drawPackMeteorNewYear},
+  {id:'stpatricks_meteor',  name:"ST. PATRICK'S",cost:0, packId:'stpatricks',  drawFn:drawPackMeteorStPatricks},
+  {id:'fourthofjuly_meteor',name:'4TH OF JULY',  cost:0, packId:'fourthofjuly',drawFn:drawPackMeteorFourthOfJuly},
 ];
 
 // ── Tail draw functions ─────────────────────────────────────────────────────
@@ -2255,7 +2297,12 @@ const TAILS=[
   {id:'royale_tail',   name:'ROYALE TRAIL',   cost:0, packId:'royale',   drawFn:(bb,bw,no)=>{const pk=PACKS.find(p=>p.id==='royale');if(pk)pk.drawTail(bb,bw,no);}},
   {id:'neoncity_tail', name:'NEON CITY TRAIL', cost:0, packId:'neoncity', drawFn:(bb,bw,no)=>{const pk=PACKS.find(p=>p.id==='neoncity');if(pk)pk.drawTail(bb,bw,no);}},
   {id:'candy_tail',    name:'CANDY TRAIL',    cost:0, packId:'candy',    drawFn:(bb,bw,no)=>{const pk=PACKS.find(p=>p.id==='candy');if(pk)pk.drawTail(bb,bw,no);}},
-  {id:'christmas_tail',name:'CHRISTMAS TRAIL',cost:0, packId:'christmas',drawFn:(bb,bw,no)=>{const pk=PACKS.find(p=>p.id==='christmas');if(pk)pk.drawTail(bb,bw,no);}},
+  {id:'christmas_tail',   name:'CHRISTMAS TRAIL',   cost:0, packId:'christmas',   drawFn:(bb,bw,no)=>{const pk=PACKS.find(p=>p.id==='christmas');   if(pk)pk.drawTail(bb,bw,no);}},
+  {id:'halloween_tail',   name:'HALLOWEEN TRAIL',   cost:0, packId:'halloween',   drawFn:(bb,bw,no)=>{const pk=PACKS.find(p=>p.id==='halloween');   if(pk)pk.drawTail(bb,bw,no);}},
+  {id:'valentines_tail',  name:"VALENTINE'S TRAIL", cost:0, packId:'valentines',  drawFn:(bb,bw,no)=>{const pk=PACKS.find(p=>p.id==='valentines');  if(pk)pk.drawTail(bb,bw,no);}},
+  {id:'newyear_tail',     name:"NEW YEAR'S TRAIL",  cost:0, packId:'newyear',     drawFn:(bb,bw,no)=>{const pk=PACKS.find(p=>p.id==='newyear');     if(pk)pk.drawTail(bb,bw,no);}},
+  {id:'stpatricks_tail',  name:"ST. PATRICK'S TRAIL",cost:0,packId:'stpatricks',  drawFn:(bb,bw,no)=>{const pk=PACKS.find(p=>p.id==='stpatricks');  if(pk)pk.drawTail(bb,bw,no);}},
+  {id:'fourthofjuly_tail',name:'4TH OF JULY TRAIL', cost:0, packId:'fourthofjuly',drawFn:(bb,bw,no)=>{const pk=PACKS.find(p=>p.id==='fourthofjuly');if(pk)pk.drawTail(bb,bw,no);}},
 ];
 
 // ── Rocket shop config ────────────────────────
@@ -2355,7 +2402,12 @@ const ROCKETS = [
   {id:'royale_rocket',   name:'ROYALE SHIP',   cost:0, packId:'royale',   drawFn:(x,y)=>drawPackRocketRoyale(x,y)  },
   {id:'neoncity_rocket', name:'NEON CITY SHIP', cost:0, packId:'neoncity', drawFn:(x,y)=>drawPackRocketNeonCity(x,y)},
   {id:'candy_rocket',    name:'CANDY SHIP',    cost:0, packId:'candy',    drawFn:(x,y)=>drawPackRocketCandy(x,y)   },
-  {id:'christmas_rocket',name:'CHRISTMAS SHIP',cost:0, packId:'christmas',drawFn:(x,y)=>drawPackRocketChristmas(x,y)},
+  {id:'christmas_rocket',   name:'CHRISTMAS SHIP',   cost:0, packId:'christmas',   drawFn:(x,y)=>drawPackRocketChristmas(x,y)},
+  {id:'halloween_rocket',   name:'HALLOWEEN SHIP',   cost:0, packId:'halloween',   drawFn:(x,y)=>drawPackRocketHalloween(x,y)},
+  {id:'valentines_rocket',  name:"VALENTINE'S SHIP", cost:0, packId:'valentines',  drawFn:(x,y)=>drawPackRocketValentines(x,y)},
+  {id:'newyear_rocket',     name:"NEW YEAR'S SHIP",  cost:0, packId:'newyear',     drawFn:(x,y)=>drawPackRocketNewYear(x,y)},
+  {id:'stpatricks_rocket',  name:"ST. PATRICK'S SHIP",cost:0,packId:'stpatricks',  drawFn:(x,y)=>drawPackRocketStPatricks(x,y)},
+  {id:'fourthofjuly_rocket',name:'4TH OF JULY SHIP', cost:0, packId:'fourthofjuly',drawFn:(x,y)=>drawPackRocketFourthOfJuly(x,y)},
 ];
 
 function loadUnlocked() {
@@ -5462,6 +5514,480 @@ function drawBgMatrix() {
   for (let sy = 0; sy < CANVAS_H; sy += 4) {
     ctx.fillRect(0, sy, CANVAS_W, 2);
   }
+}
+
+// ── HALLOWEEN pack (Oct 1–31) ──────────────────────────────────────────────────
+function drawPackBgHalloween() {
+  const sky=ctx.createLinearGradient(0,0,0,CANVAS_H);
+  sky.addColorStop(0,'#0a0010'); sky.addColorStop(0.55,'#150820'); sky.addColorStop(1,'#0e0408');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
+  for(let i=0;i<50;i++){
+    const sx=(i*197.3)%CANVAS_W,sy=(i*113.7)%(CANVAS_H*0.7);
+    const a=0.2+0.3*Math.sin(gameTime*0.8+i);
+    ctx.fillStyle=`rgba(180,160,220,${a})`; ctx.beginPath(); ctx.arc(sx,sy,1,0,Math.PI*2); ctx.fill();
+  }
+  // Big orange moon with glow
+  const mx=CANVAS_W*0.72,my=CANVAS_H*0.15;
+  const moonG=ctx.createRadialGradient(mx,my,20,mx,my,70);
+  moonG.addColorStop(0,'rgba(255,140,20,0.25)'); moonG.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=moonG; ctx.beginPath(); ctx.arc(mx,my,70,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(mx,my,28,0,Math.PI*2); ctx.fillStyle='#ff9922'; ctx.fill();
+  ctx.fillStyle='rgba(180,80,0,0.3)';
+  ctx.beginPath(); ctx.arc(mx+8,my-6,5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(mx-10,my+8,3,0,Math.PI*2); ctx.fill();
+  // Bats
+  const t=gameTime;
+  for(let b=0;b<5;b++){
+    const bx=((b*0.2+t*0.04*(b%2===0?1:-0.7))%1)*CANVAS_W;
+    const by=CANVAS_H*(0.08+(b*0.11)%0.35)+Math.sin(t*3+b)*18;
+    const flap=Math.sin(t*8+b)*0.6;
+    ctx.save(); ctx.translate(bx,by); ctx.fillStyle='#1a0a22';
+    ctx.beginPath(); ctx.ellipse(0,0,5,3,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(-12,flap*15-8,-18,flap*10-2); ctx.quadraticCurveTo(-12,flap*8,0,2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(12,flap*15-8,18,flap*10-2); ctx.quadraticCurveTo(12,flap*8,0,2); ctx.fill();
+    ctx.restore();
+  }
+  // Bare trees
+  const groundY=CANVAS_H*0.82;
+  for(const tx of [0.05,0.18,0.38,0.62,0.82,0.96]){
+    const tcx=CANVAS_W*tx, th=CANVAS_H*(0.18+(tx*9)%0.08);
+    ctx.strokeStyle='#1a0a08'; ctx.lineWidth=4+(tx*5)%3;
+    ctx.beginPath(); ctx.moveTo(tcx,groundY); ctx.lineTo(tcx,groundY-th); ctx.stroke();
+    for(let br=0;br<4;br++){
+      const brY=groundY-th*(0.35+br*0.2),brLen=(18-br*3)*(1+(tx+br)*0.1);
+      ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(tcx,brY); ctx.lineTo(tcx-brLen,brY-12); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(tcx,brY); ctx.lineTo(tcx+brLen,brY-8); ctx.stroke();
+    }
+  }
+  const gnd=ctx.createLinearGradient(0,groundY,0,CANVAS_H);
+  gnd.addColorStop(0,'#1c0e2a'); gnd.addColorStop(1,'#0a0414');
+  ctx.fillStyle=gnd; ctx.fillRect(0,groundY,CANVAS_W,CANVAS_H);
+  // Ground mist
+  for(let i=0;i<5;i++){
+    const mx2=((i*0.2+(gameTime*0.02+i*0.13)%0.2))*CANVAS_W;
+    const mg=ctx.createRadialGradient(mx2,groundY,0,mx2,groundY,55);
+    mg.addColorStop(0,'rgba(120,60,180,0.12)'); mg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=mg; ctx.beginPath(); ctx.arc(mx2,groundY,55,0,Math.PI*2); ctx.fill();
+  }
+}
+function drawPackTailHalloween(bb,bw,no){
+  const ny=bb+no,hw=bw*0.44,t=gameTime;
+  const cols=['255,100,0','180,0,255','255,140,0','100,0,180'];
+  for(let i=0;i<16;i++){
+    const age=(i/16+t*0.55)%1;
+    const px=Math.sin(i*1.3+t*1.8)*hw*(0.2+age*0.8);
+    const py=ny+age*55;
+    const a=0.85*(1-age), sz=Math.max(0.5,5*(1-age));
+    ctx.fillStyle=`rgba(${cols[i%cols.length]},${a})`;
+    ctx.beginPath(); ctx.arc(px,py,sz,0,Math.PI*2); ctx.fill();
+  }
+}
+function drawPackRocketHalloween(x,y){
+  ctx.save(); ctx.translate(x,y);
+  const bw=28,bh=54,bb=bh/2,bt=-bh/2;
+  for(const s of[-1,1]){
+    ctx.beginPath(); ctx.moveTo(s*bw/2,bb-14); ctx.lineTo(s*(bw/2+14),bb+10); ctx.lineTo(s*bw/2,bb+4); ctx.closePath();
+    ctx.fillStyle='#cc5500'; ctx.fill();
+  }
+  const bg=ctx.createLinearGradient(-bw/2,0,bw/2,0);
+  bg.addColorStop(0,'#0a0010'); bg.addColorStop(0.4,'#1a0030'); bg.addColorStop(0.6,'#1a0030'); bg.addColorStop(1,'#0a0010');
+  ctx.beginPath(); ctx.roundRect(-bw/2,bt,bw,bh,[3,3,6,6]); ctx.fillStyle=bg; ctx.fill();
+  // Pumpkin face
+  const fcy=bt+bh*0.42;
+  ctx.fillStyle='#ff8800';
+  ctx.beginPath(); ctx.moveTo(-8,fcy-6); ctx.lineTo(-5,fcy-10); ctx.lineTo(-2,fcy-6); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(2,fcy-6); ctx.lineTo(5,fcy-10); ctx.lineTo(8,fcy-6); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='#ff8800'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(-8,fcy+2); ctx.lineTo(-5,fcy+5); ctx.lineTo(-2,fcy+2); ctx.lineTo(0,fcy+5); ctx.lineTo(3,fcy+2); ctx.lineTo(6,fcy+5); ctx.lineTo(8,fcy+2); ctx.stroke();
+  // Purple cone
+  ctx.beginPath(); ctx.moveTo(-bw/2,bt); ctx.quadraticCurveTo(0,bt-26,0,bt-44); ctx.quadraticCurveTo(0,bt-26,bw/2,bt); ctx.closePath();
+  ctx.fillStyle='#3a0060'; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-bw*0.42,bb); ctx.lineTo(bw*0.42,bb); ctx.lineTo(bw*0.52,bb+10); ctx.lineTo(-bw*0.52,bb+10); ctx.closePath();
+  ctx.fillStyle='#0a0010'; ctx.fill();
+  drawPackTailHalloween(bb,bw,10);
+  ctx.restore();
+}
+function drawPackMeteorHalloween(m){
+  ctx.save(); ctx.translate(m.x,m.y);
+  const r=m.rx;
+  const body=ctx.createRadialGradient(-r*0.25,-r*0.2,1,0,0,r);
+  body.addColorStop(0,'#ffaa22'); body.addColorStop(0.5,'#dd6600'); body.addColorStop(1,'#883300');
+  ctx.beginPath(); ctx.ellipse(0,0,r,r*0.92,0,0,Math.PI*2); ctx.fillStyle=body; ctx.fill();
+  ctx.strokeStyle='rgba(100,40,0,0.4)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.ellipse(-r*0.32,0,r*0.28,r*0.85,0,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(r*0.32,0,r*0.28,r*0.85,0,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle='#ffff00';
+  ctx.beginPath(); ctx.moveTo(-r*0.38,-r*0.15); ctx.lineTo(-r*0.22,-r*0.3); ctx.lineTo(-r*0.06,-r*0.15); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(r*0.06,-r*0.15); ctx.lineTo(r*0.22,-r*0.3); ctx.lineTo(r*0.38,-r*0.15); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='#ffff00'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(-r*0.4,r*0.2); ctx.lineTo(-r*0.2,r*0.32); ctx.lineTo(-r*0.05,r*0.18); ctx.lineTo(r*0.05,r*0.32); ctx.lineTo(r*0.2,r*0.18); ctx.lineTo(r*0.4,r*0.2); ctx.stroke();
+  ctx.strokeStyle='#224400'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(0,-r); ctx.quadraticCurveTo(r*0.2,-r*1.2,r*0.08,-r*1.4); ctx.stroke();
+  ctx.beginPath(); ctx.arc(-r*0.28,-r*0.28,r*0.14,0,Math.PI*2); ctx.fillStyle='rgba(255,255,200,0.55)'; ctx.fill();
+  ctx.restore();
+}
+
+// ── VALENTINE'S pack (Feb 1–28) ────────────────────────────────────────────────
+function drawPackBgValentines(){
+  const sky=ctx.createLinearGradient(0,0,0,CANVAS_H);
+  sky.addColorStop(0,'#1a0015'); sky.addColorStop(0.5,'#280020'); sky.addColorStop(1,'#1a0010');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
+  for(let i=0;i<60;i++){
+    const sx=(i*211.1)%CANVAS_W,sy=(i*127.7)%(CANVAS_H*0.75);
+    const a=0.2+0.5*Math.sin(gameTime*1.5+i*0.9);
+    ctx.fillStyle=`rgba(255,180,210,${a})`; ctx.beginPath(); ctx.arc(sx,sy,1,0,Math.PI*2); ctx.fill();
+  }
+  // Floating hearts
+  const t=gameTime;
+  for(let i=0;i<18;i++){
+    const phase=(i/18+t*(0.03+i%3*0.01))%1;
+    const hx=((i*0.19+0.04)%1)*CANVAS_W, hy=(1-phase)*(CANVAS_H+30)-15;
+    const sz=5+i%4*4, a=0.3+0.4*Math.sin(t*2+i);
+    ctx.save(); ctx.translate(hx,hy); ctx.scale(sz/18,sz/18);
+    ctx.fillStyle=`rgba(255,${60+i%3*30},${100+i%4*20},${a})`;
+    ctx.beginPath(); ctx.moveTo(0,4); ctx.bezierCurveTo(-2,0,-10,-6,-10,-12); ctx.bezierCurveTo(-10,-20,0,-20,0,-14); ctx.bezierCurveTo(0,-20,10,-20,10,-12); ctx.bezierCurveTo(10,-6,2,0,0,4); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  const gnd=ctx.createLinearGradient(0,CANVAS_H*0.8,0,CANVAS_H);
+  gnd.addColorStop(0,'#2a0025'); gnd.addColorStop(1,'#120010');
+  ctx.fillStyle=gnd; ctx.fillRect(0,CANVAS_H*0.8,CANVAS_W,CANVAS_H);
+  for(let i=0;i<30;i++){
+    const sx=((i*0.17+t*0.04)%1)*CANVAS_W,sy=((i*0.13+t*0.03+i*0.07)%1)*CANVAS_H;
+    const a=0.4+0.4*Math.sin(t*4+i*1.3);
+    ctx.fillStyle=`rgba(255,150,200,${a})`; ctx.beginPath(); ctx.arc(sx,sy,1.5,0,Math.PI*2); ctx.fill();
+  }
+}
+function drawPackTailValentines(bb,bw,no){
+  const ny=bb+no,hw=bw*0.4,t=gameTime;
+  for(let i=0;i<14;i++){
+    const age=(i/14+t*0.5)%1;
+    const px=Math.sin(i*1.5+t*1.8)*hw*(0.2+age*0.8);
+    const py=ny+age*50;
+    const a=0.85*(1-age), sz=Math.max(0.5,5*(1-age));
+    ctx.save(); ctx.translate(px,py); ctx.scale(sz/12,sz/12);
+    ctx.fillStyle=`rgba(255,${60+i%3*25},${100+i%4*20},${a})`;
+    ctx.beginPath(); ctx.moveTo(0,4); ctx.bezierCurveTo(-2,0,-10,-6,-10,-12); ctx.bezierCurveTo(-10,-20,0,-20,0,-14); ctx.bezierCurveTo(0,-20,10,-20,10,-12); ctx.bezierCurveTo(10,-6,2,0,0,4); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+}
+function drawPackRocketValentines(x,y){
+  ctx.save(); ctx.translate(x,y);
+  const bw=28,bh=54,bb=bh/2,bt=-bh/2;
+  for(const s of[-1,1]){
+    ctx.save(); ctx.translate(s*(bw/2+8),bb-8); ctx.fillStyle='#cc0044';
+    ctx.beginPath(); ctx.moveTo(0,8); ctx.bezierCurveTo(-1,5,-8,0,-8,-5); ctx.bezierCurveTo(-8,-12,0,-12,0,-8); ctx.bezierCurveTo(0,-12,8,-12,8,-5); ctx.bezierCurveTo(8,0,1,5,0,8); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  const bg=ctx.createLinearGradient(-bw/2,0,bw/2,0);
+  bg.addColorStop(0,'#880022'); bg.addColorStop(0.4,'#cc0044'); bg.addColorStop(0.6,'#dd1155'); bg.addColorStop(1,'#880022');
+  ctx.beginPath(); ctx.roundRect(-bw/2,bt,bw,bh,[3,3,6,6]); ctx.fillStyle=bg; ctx.fill();
+  // Heart on body
+  ctx.save(); ctx.translate(0,bt+bh*0.42); ctx.scale(0.6,0.6);
+  ctx.fillStyle='rgba(255,180,200,0.9)';
+  ctx.beginPath(); ctx.moveTo(0,10); ctx.bezierCurveTo(-2,6,-14,-2,-14,-10); ctx.bezierCurveTo(-14,-22,0,-22,0,-14); ctx.bezierCurveTo(0,-22,14,-22,14,-10); ctx.bezierCurveTo(14,-2,2,6,0,10); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  ctx.beginPath(); ctx.moveTo(-bw/2,bt); ctx.quadraticCurveTo(0,bt-26,0,bt-44); ctx.quadraticCurveTo(0,bt-26,bw/2,bt); ctx.closePath();
+  ctx.fillStyle='#ff0055'; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-bw*0.42,bb); ctx.lineTo(bw*0.42,bb); ctx.lineTo(bw*0.52,bb+10); ctx.lineTo(-bw*0.52,bb+10); ctx.closePath();
+  ctx.fillStyle='#440011'; ctx.fill();
+  drawPackTailValentines(bb,bw,10);
+  ctx.restore();
+}
+function drawPackMeteorValentines(m){
+  ctx.save(); ctx.translate(m.x,m.y); ctx.rotate(m.rotation);
+  const r=m.rx;
+  const glow=ctx.createRadialGradient(0,0,r*0.2,0,0,r*1.6);
+  glow.addColorStop(0,'rgba(255,50,100,0.3)'); glow.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(0,0,r*1.6,0,Math.PI*2); ctx.fill();
+  ctx.save(); ctx.scale(r/14,r/14);
+  const hg=ctx.createRadialGradient(-4,-4,1,0,0,16);
+  hg.addColorStop(0,'#ff88aa'); hg.addColorStop(0.4,'#ee1155'); hg.addColorStop(1,'#880022');
+  ctx.fillStyle=hg;
+  ctx.beginPath(); ctx.moveTo(0,10); ctx.bezierCurveTo(-2,5,-14,-4,-14,-12); ctx.bezierCurveTo(-14,-24,0,-24,0,-16); ctx.bezierCurveTo(0,-24,14,-24,14,-12); ctx.bezierCurveTo(14,-4,2,5,0,10); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(255,150,180,0.4)'; ctx.lineWidth=1; ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.arc(-5,-10,3,0,Math.PI*2); ctx.fill();
+  ctx.restore(); ctx.restore();
+}
+
+// ── NEW YEAR'S pack (Jan 1–31) ─────────────────────────────────────────────────
+function drawPackBgNewYear(){
+  const sky=ctx.createLinearGradient(0,0,0,CANVAS_H);
+  sky.addColorStop(0,'#000005'); sky.addColorStop(1,'#050015');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
+  for(let i=0;i<80;i++){
+    const sx=(i*179.3)%CANVAS_W,sy=(i*109.7)%(CANVAS_H*0.85);
+    const a=0.3+0.5*Math.sin(gameTime*1.8+i*0.7);
+    ctx.fillStyle=`rgba(255,255,220,${a})`; ctx.beginPath(); ctx.arc(sx,sy,1+(i%3)*0.4,0,Math.PI*2); ctx.fill();
+  }
+  // Firework bursts
+  const t=gameTime;
+  const fwSpots=[{x:0.22,y:0.18,c:'255,215,0'},{x:0.68,y:0.12,c:'255,80,120'},{x:0.45,y:0.28,c:'80,200,255'},{x:0.15,y:0.34,c:'150,255,80'},{x:0.8,y:0.32,c:'255,120,50'}];
+  for(const [fi,fw] of fwSpots.entries()){
+    const phase=(t*0.5+fi*0.2)%1;
+    const rad=phase<0.5?phase*2*55:(1-(phase-0.5)*2)*55;
+    const a=phase<0.5?phase*2*0.8:(1-(phase-0.5)*2)*0.8;
+    const bx=fw.x*CANVAS_W,by=fw.y*CANVAS_H;
+    for(let s=0;s<12;s++){
+      const ang=s/12*Math.PI*2;
+      ctx.strokeStyle=`rgba(${fw.c},${a})`; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(bx+Math.cos(ang)*rad*0.3,by+Math.sin(ang)*rad*0.3); ctx.lineTo(bx+Math.cos(ang)*rad,by+Math.sin(ang)*rad); ctx.stroke();
+      ctx.fillStyle=`rgba(${fw.c},${a*0.9})`; ctx.beginPath(); ctx.arc(bx+Math.cos(ang)*rad,by+Math.sin(ang)*rad,2,0,Math.PI*2); ctx.fill();
+    }
+  }
+  // Gold confetti
+  const confCols=['255,215,0','220,220,220','255,80,120','80,200,255'];
+  for(let i=0;i<40;i++){
+    const cf=((i*0.12+t*0.08)%1);
+    const cx2=((i*0.17+Math.sin(t+i)*0.03)%1)*CANVAS_W, cy2=cf*CANVAS_H;
+    ctx.save(); ctx.translate(cx2,cy2); ctx.rotate(t*2+i*0.8);
+    ctx.fillStyle=`rgba(${confCols[i%confCols.length]},0.7)`; ctx.fillRect(-4,-1.5,8,3);
+    ctx.restore();
+  }
+  ctx.fillStyle='#020010'; ctx.fillRect(0,CANVAS_H*0.85,CANVAS_W,CANVAS_H);
+}
+function drawPackTailNewYear(bb,bw,no){
+  const ny=bb+no,hw=bw*0.42,t=gameTime;
+  const cols=['255,215,0','220,220,220','255,80,120','80,200,255','150,255,80'];
+  for(let i=0;i<20;i++){
+    const age=(i/20+t*0.7)%1;
+    const px=Math.sin(i*1.4+t*2)*hw*(0.15+age*0.85), py=ny+age*60;
+    const a=0.9*(1-age), sz=Math.max(0.5,4*(1-age));
+    ctx.save(); ctx.translate(px,py); ctx.rotate(i*0.6+t);
+    ctx.fillStyle=`rgba(${cols[i%cols.length]},${a})`; ctx.fillRect(-sz,-sz*0.35,sz*2,sz*0.7);
+    ctx.restore();
+  }
+}
+function drawPackRocketNewYear(x,y){
+  ctx.save(); ctx.translate(x,y);
+  const bw=26,bh=54,bb=bh/2,bt=-bh/2;
+  for(const s of[-1,1]){
+    ctx.beginPath(); ctx.moveTo(s*bw/2,bb-14); ctx.lineTo(s*(bw/2+14),bb+10); ctx.lineTo(s*bw/2,bb+2); ctx.closePath();
+    ctx.fillStyle='#c8a020'; ctx.fill();
+  }
+  const bg=ctx.createLinearGradient(-bw/2,0,bw/2,0);
+  bg.addColorStop(0,'#5a4800'); bg.addColorStop(0.2,'#b88c10'); bg.addColorStop(0.5,'#ffd700'); bg.addColorStop(0.8,'#b88c10'); bg.addColorStop(1,'#5a4800');
+  ctx.beginPath(); ctx.roundRect(-bw/2,bt,bw,bh,[3,3,6,6]); ctx.fillStyle=bg; ctx.fill();
+  ctx.fillStyle='rgba(220,220,220,0.8)'; ctx.fillRect(-bw/2,bt+bh*0.35,bw,5);
+  // Star on body
+  ctx.save(); ctx.translate(0,bt+bh*0.62); ctx.fillStyle='#fff8c0';
+  for(let i=0;i<5;i++){ ctx.rotate(Math.PI*2/5); ctx.beginPath(); ctx.moveTo(0,-7); ctx.lineTo(2.5,-2.5); ctx.lineTo(7,-2.5); ctx.lineTo(3.5,1.5); ctx.lineTo(4.5,6.5); ctx.lineTo(0,3.5); ctx.lineTo(-4.5,6.5); ctx.lineTo(-3.5,1.5); ctx.lineTo(-7,-2.5); ctx.lineTo(-2.5,-2.5); ctx.closePath(); ctx.fill(); }
+  ctx.restore();
+  const ng=ctx.createLinearGradient(-bw/2,bt,bw/2,bt);
+  ng.addColorStop(0,'#8a6000'); ng.addColorStop(0.5,'#ffd700'); ng.addColorStop(1,'#8a6000');
+  ctx.beginPath(); ctx.moveTo(-bw/2,bt); ctx.quadraticCurveTo(0,bt-26,0,bt-44); ctx.quadraticCurveTo(0,bt-26,bw/2,bt); ctx.closePath(); ctx.fillStyle=ng; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-bw*0.42,bb); ctx.lineTo(bw*0.42,bb); ctx.lineTo(bw*0.52,bb+10); ctx.lineTo(-bw*0.52,bb+10); ctx.closePath();
+  ctx.fillStyle='#2a2000'; ctx.fill();
+  drawPackTailNewYear(bb,bw,10);
+  ctx.restore();
+}
+function drawPackMeteorNewYear(m){
+  ctx.save(); ctx.translate(m.x,m.y);
+  const r=m.rx,t=gameTime;
+  const fireCols=['255,215,0','255,80,120','80,200,255','150,255,80','255,120,50'];
+  const col=fireCols[Math.floor((m.x*0.01+m.y*0.007+t*0.3))%fireCols.length];
+  const cg=ctx.createRadialGradient(0,0,0,0,0,r*0.5);
+  cg.addColorStop(0,'rgba(255,255,255,0.9)'); cg.addColorStop(0.5,`rgba(${col},0.8)`); cg.addColorStop(1,`rgba(${col},0)`);
+  ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(0,0,r*0.5,0,Math.PI*2); ctx.fill();
+  for(let s=0;s<12;s++){
+    const ang=s/12*Math.PI*2+t*0.5, len=r*(0.7+Math.sin(t*2+s)*0.3);
+    ctx.strokeStyle=`rgba(${col},0.8)`; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(Math.cos(ang)*r*0.4,Math.sin(ang)*r*0.4); ctx.lineTo(Math.cos(ang)*len,Math.sin(ang)*len); ctx.stroke();
+    ctx.fillStyle=`rgba(${col},0.9)`; ctx.beginPath(); ctx.arc(Math.cos(ang)*len,Math.sin(ang)*len,2.5,0,Math.PI*2); ctx.fill();
+  }
+  for(let s=0;s<12;s++){
+    const ang=(s+0.5)/12*Math.PI*2+t*0.5, len=r*(0.4+Math.sin(t*3+s)*0.2);
+    ctx.strokeStyle='rgba(255,255,200,0.6)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(ang)*len,Math.sin(ang)*len); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ── ST. PATRICK'S pack (Mar 1–31) ─────────────────────────────────────────────
+function drawPackBgStPatricks(){
+  const sky=ctx.createLinearGradient(0,0,0,CANVAS_H);
+  sky.addColorStop(0,'#001a05'); sky.addColorStop(0.6,'#002a08'); sky.addColorStop(1,'#001a03');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
+  for(let i=0;i<50;i++){
+    const sx=(i*193.7)%CANVAS_W,sy=(i*117.3)%(CANVAS_H*0.6);
+    const a=0.2+0.3*Math.sin(gameTime*1.2+i);
+    ctx.fillStyle=`rgba(180,255,180,${a})`; ctx.beginPath(); ctx.arc(sx,sy,1,0,Math.PI*2); ctx.fill();
+  }
+  // Rainbow arc
+  for(const[ai,col] of ['#ff0000','#ff8800','#ffff00','#00cc00','#0044ff','#8800ff'].entries()){
+    ctx.strokeStyle=col+'bb'; ctx.lineWidth=8;
+    ctx.beginPath(); ctx.arc(CANVAS_W*0.5,CANVAS_H*0.72,CANVAS_W*(0.3+ai*0.04),Math.PI,Math.PI*2); ctx.stroke();
+  }
+  // Floating shamrocks
+  const t=gameTime;
+  for(let i=0;i<14;i++){
+    const phase=(i/14+t*(0.025+i%3*0.008))%1;
+    const sx=((i*0.22+0.04)%1)*CANVAS_W, sy=(1-phase)*CANVAS_H;
+    const sz=6+i%4*4, a=0.35+0.35*Math.sin(t*2+i);
+    ctx.save(); ctx.translate(sx,sy); ctx.scale(sz/16,sz/16);
+    ctx.fillStyle=`rgba(20,160,40,${a})`;
+    for(const[lx,ly] of[[-8,-8],[8,-8],[0,4]]){ ctx.beginPath(); ctx.arc(lx,ly,8,0,Math.PI*2); ctx.fill(); }
+    ctx.strokeStyle=`rgba(10,80,20,${a*0.5})`; ctx.lineWidth=0.5;
+    ctx.beginPath(); ctx.moveTo(0,8); ctx.lineTo(0,18); ctx.stroke();
+    ctx.restore();
+  }
+  const gnd=ctx.createLinearGradient(0,CANVAS_H*0.8,0,CANVAS_H);
+  gnd.addColorStop(0,'#004010'); gnd.addColorStop(1,'#002008');
+  ctx.fillStyle=gnd; ctx.fillRect(0,CANVAS_H*0.8,CANVAS_W,CANVAS_H);
+  // Pot of gold
+  const px2=CANVAS_W*0.88,py2=CANVAS_H*0.82;
+  ctx.fillStyle='#1a0a00';
+  ctx.beginPath(); ctx.moveTo(px2-18,py2); ctx.quadraticCurveTo(px2-20,py2+24,px2,py2+28); ctx.quadraticCurveTo(px2+20,py2+24,px2+18,py2); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#ffd700'; ctx.beginPath(); ctx.ellipse(px2,py2,18,6,0,0,Math.PI*2); ctx.fill();
+  for(let g=0;g<5;g++){ ctx.beginPath(); ctx.arc(px2-8+g*4,py2-g*3,3,0,Math.PI*2); ctx.fillStyle='#ffc000'; ctx.fill(); }
+  for(let g=0;g<6;g++){
+    const a=0.4+0.5*Math.sin(t*4+g*1.1);
+    ctx.fillStyle=`rgba(255,215,0,${a})`; ctx.beginPath(); ctx.arc(px2-14+g*6,py2-g*5-4,1.5,0,Math.PI*2); ctx.fill();
+  }
+}
+function drawPackTailStPatricks(bb,bw,no){
+  const ny=bb+no,hw=bw*0.4,t=gameTime;
+  const cols=['20,200,50','255,200,0','30,160,40','220,180,0'];
+  for(let i=0;i<18;i++){
+    const age=(i/18+t*0.6)%1;
+    const px=Math.sin(i*1.3+t*1.9)*hw*(0.2+age*0.8), py=ny+age*55;
+    const a=0.85*(1-age), sz=Math.max(0.5,5*(1-age));
+    ctx.fillStyle=`rgba(${cols[i%cols.length]},${a})`;
+    ctx.beginPath(); ctx.arc(px,py,sz,0,Math.PI*2); ctx.fill();
+  }
+}
+function drawPackRocketStPatricks(x,y){
+  ctx.save(); ctx.translate(x,y);
+  const bw=26,bh=54,bb=bh/2,bt=-bh/2;
+  for(const s of[-1,1]){
+    ctx.beginPath(); ctx.moveTo(s*bw/2,bb-14); ctx.lineTo(s*(bw/2+14),bb+10); ctx.lineTo(s*bw/2,bb+2); ctx.closePath();
+    ctx.fillStyle='#c8a020'; ctx.fill();
+  }
+  const bg=ctx.createLinearGradient(-bw/2,0,bw/2,0);
+  bg.addColorStop(0,'#003308'); bg.addColorStop(0.4,'#00660f'); bg.addColorStop(0.6,'#007812'); bg.addColorStop(1,'#003308');
+  ctx.beginPath(); ctx.roundRect(-bw/2,bt,bw,bh,[3,3,6,6]); ctx.fillStyle=bg; ctx.fill();
+  ctx.fillStyle='rgba(200,160,20,0.85)'; ctx.fillRect(-bw/2,bt+bh*0.35,bw,4);
+  // Shamrock decal
+  ctx.save(); ctx.translate(0,bt+bh*0.6); ctx.scale(0.55,0.55); ctx.fillStyle='rgba(150,255,150,0.9)';
+  for(const[lx,ly] of[[-8,-8],[8,-8],[0,4]]){ ctx.beginPath(); ctx.arc(lx,ly,8,0,Math.PI*2); ctx.fill(); }
+  ctx.restore();
+  // Top hat tip
+  ctx.fillStyle='#111111'; ctx.beginPath(); ctx.roundRect(-bw/2,bt,bw,18,3); ctx.fill();
+  ctx.fillStyle='#00aa22'; ctx.fillRect(-bw/2,bt+14,bw,6);
+  ctx.fillStyle='#111111';
+  ctx.beginPath(); ctx.moveTo(-bw/2,bt+20); ctx.quadraticCurveTo(0,bt-20,bw/2,bt+20); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-bw*0.42,bb); ctx.lineTo(bw*0.42,bb); ctx.lineTo(bw*0.52,bb+10); ctx.lineTo(-bw*0.52,bb+10); ctx.closePath();
+  ctx.fillStyle='#002206'; ctx.fill();
+  drawPackTailStPatricks(bb,bw,10);
+  ctx.restore();
+}
+function drawPackMeteorStPatricks(m){
+  ctx.save(); ctx.translate(m.x,m.y);
+  const r=m.rx;
+  const glow=ctx.createRadialGradient(0,0,r*0.2,0,0,r*1.5);
+  glow.addColorStop(0,'rgba(50,220,80,0.3)'); glow.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(0,0,r*1.5,0,Math.PI*2); ctx.fill();
+  const lr=r*0.52;
+  const cg=ctx.createRadialGradient(-lr*0.5,-lr*0.5,1,0,0,r);
+  cg.addColorStop(0,'#88ff88'); cg.addColorStop(0.4,'#00cc30'); cg.addColorStop(1,'#005518');
+  ctx.fillStyle=cg;
+  for(const[lx,ly] of[[-lr,-lr],[lr,-lr],[-lr,lr],[lr,lr]]){ ctx.beginPath(); ctx.arc(lx,ly,lr,0,Math.PI*2); ctx.fill(); }
+  ctx.fillStyle='rgba(255,220,80,0.6)'; ctx.beginPath(); ctx.arc(-r*0.3,-r*0.3,r*0.18,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#005518'; ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.moveTo(0,r*0.5); ctx.quadraticCurveTo(r*0.3,r*0.9,r*0.15,r*1.3); ctx.stroke();
+  ctx.restore();
+}
+
+// ── 4TH OF JULY pack (Jul 1–31) ────────────────────────────────────────────────
+function drawPackBgFourthOfJuly(){
+  const sky=ctx.createLinearGradient(0,0,0,CANVAS_H);
+  sky.addColorStop(0,'#000008'); sky.addColorStop(1,'#020010');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
+  for(let i=0;i<70;i++){
+    const sx=(i*173.1)%CANVAS_W,sy=(i*107.3)%(CANVAS_H*0.75);
+    const a=0.3+0.5*Math.sin(gameTime*1.5+i*0.8);
+    ctx.fillStyle=`rgba(255,255,220,${a})`; ctx.beginPath(); ctx.arc(sx,sy,1+(i%3)*0.3,0,Math.PI*2); ctx.fill();
+  }
+  // Red/white/blue fireworks
+  const t=gameTime;
+  const fwData=[{x:0.2,y:0.15,c:'255,40,60'},{x:0.75,y:0.1,c:'255,255,255'},{x:0.48,y:0.22,c:'60,100,255'},{x:0.12,y:0.38,c:'255,40,60'},{x:0.85,y:0.3,c:'255,255,255'},{x:0.55,y:0.35,c:'60,100,255'}];
+  for(const[fi,fw] of fwData.entries()){
+    const phase=(t*0.45+fi*0.17)%1;
+    const rad=phase<0.5?phase*2*50:(1-(phase-0.5)*2)*50;
+    const a=phase<0.5?phase*2*0.85:(1-(phase-0.5)*2)*0.85;
+    const bx=fw.x*CANVAS_W,by=fw.y*CANVAS_H;
+    for(let s=0;s<10;s++){
+      const ang=s/10*Math.PI*2;
+      ctx.strokeStyle=`rgba(${fw.c},${a})`; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(bx+Math.cos(ang)*rad*0.3,by+Math.sin(ang)*rad*0.3); ctx.lineTo(bx+Math.cos(ang)*rad,by+Math.sin(ang)*rad); ctx.stroke();
+    }
+  }
+  ctx.fillStyle='#020010'; ctx.fillRect(0,CANVAS_H*0.85,CANVAS_W,CANVAS_H);
+  // Crowd silhouette
+  for(let i=0;i<16;i++){
+    const hx=CANVAS_W*((i+0.5)/16),hy=CANVAS_H*0.85,hw2=CANVAS_W*0.035,hh=CANVAS_H*(0.05+i%3*0.015);
+    ctx.fillStyle='rgba(10,5,20,0.9)';
+    ctx.beginPath(); ctx.arc(hx,hy-hh,hw2*0.6,0,Math.PI*2); ctx.fill();
+    ctx.fillRect(hx-hw2*0.35,hy-hh,hw2*0.7,hh);
+  }
+}
+function drawPackTailFourthOfJuly(bb,bw,no){
+  const ny=bb+no,hw=bw*0.42,t=gameTime;
+  const cols=['255,40,60','255,255,255','60,100,255','255,180,0'];
+  for(let i=0;i<20;i++){
+    const age=(i/20+t*0.68)%1;
+    const px=Math.sin(i*1.5+t*2.1)*hw*(0.2+age*0.8), py=ny+age*58;
+    const a=0.85*(1-age), sz=Math.max(0.5,5*(1-age));
+    ctx.fillStyle=`rgba(${cols[i%cols.length]},${a})`;
+    ctx.beginPath(); ctx.arc(px,py,sz,0,Math.PI*2); ctx.fill();
+  }
+}
+function drawPackRocketFourthOfJuly(x,y){
+  ctx.save(); ctx.translate(x,y);
+  const bw=28,bh=56,bb=bh/2,bt=-bh/2;
+  for(const s of[-1,1]){
+    ctx.beginPath(); ctx.moveTo(s*bw/2,bb-14); ctx.lineTo(s*(bw/2+14),bb+10); ctx.lineTo(s*bw/2,bb+2); ctx.closePath();
+    ctx.fillStyle='#0033cc'; ctx.fill();
+    ctx.save(); ctx.translate(s*(bw/2+7),bb); ctx.fillStyle='rgba(255,255,255,0.9)';
+    ctx.beginPath(); ctx.moveTo(0,-5); ctx.lineTo(1.5,-2); ctx.lineTo(4,-2); ctx.lineTo(2,0); ctx.lineTo(3,3); ctx.lineTo(0,1.5); ctx.lineTo(-3,3); ctx.lineTo(-2,0); ctx.lineTo(-4,-2); ctx.lineTo(-1.5,-2); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  // Red/white/blue stripes
+  const stripes=['#cc1122','#ffffff','#cc1122','#0033cc'];
+  const segH=bh/4;
+  for(let s=0;s<4;s++){
+    ctx.beginPath(); ctx.roundRect(-bw/2,bt+s*segH,bw,segH+1,s===0?[3,3,0,0]:s===3?[0,0,6,6]:[0]);
+    ctx.fillStyle=stripes[s]; ctx.fill();
+  }
+  // Gold star
+  ctx.save(); ctx.translate(0,bt+bh*0.38); ctx.fillStyle='rgba(255,215,0,0.9)';
+  for(let i=0;i<5;i++){ ctx.rotate(Math.PI*2/5); ctx.beginPath(); ctx.moveTo(0,-8); ctx.lineTo(2.5,-2.5); ctx.lineTo(7,-2.5); ctx.lineTo(3.5,1.5); ctx.lineTo(4.5,6.5); ctx.lineTo(0,3.5); ctx.lineTo(-4.5,6.5); ctx.lineTo(-3.5,1.5); ctx.lineTo(-7,-2.5); ctx.lineTo(-2.5,-2.5); ctx.closePath(); ctx.fill(); }
+  ctx.restore();
+  // Blue cone
+  ctx.beginPath(); ctx.moveTo(-bw/2,bt); ctx.quadraticCurveTo(0,bt-26,0,bt-44); ctx.quadraticCurveTo(0,bt-26,bw/2,bt); ctx.closePath();
+  ctx.fillStyle='#0033cc'; ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(0,bt-22,4,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-bw*0.42,bb); ctx.lineTo(bw*0.42,bb); ctx.lineTo(bw*0.52,bb+10); ctx.lineTo(-bw*0.52,bb+10); ctx.closePath();
+  ctx.fillStyle='#001166'; ctx.fill();
+  drawPackTailFourthOfJuly(bb,bw,10);
+  ctx.restore();
+}
+function drawPackMeteorFourthOfJuly(m){
+  ctx.save(); ctx.translate(m.x,m.y);
+  const r=m.rx,t=gameTime;
+  const fwCols=[['255,40,60','255,255,255'],['255,255,255','60,100,255'],['60,100,255','255,40,60']];
+  const pair=fwCols[Math.floor((m.x*0.01+m.y*0.007+t*0.25))%fwCols.length];
+  const cg=ctx.createRadialGradient(0,0,0,0,0,r*0.4);
+  cg.addColorStop(0,'rgba(255,255,255,0.95)'); cg.addColorStop(0.6,`rgba(${pair[0]},0.8)`); cg.addColorStop(1,`rgba(${pair[0]},0)`);
+  ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(0,0,r*0.4,0,Math.PI*2); ctx.fill();
+  for(let s=0;s<16;s++){
+    const ang=s/16*Math.PI*2+t*0.4, len=r*(0.65+Math.sin(t*3+s)*0.35);
+    const col=s%2===0?pair[0]:pair[1];
+    ctx.strokeStyle=`rgba(${col},0.85)`; ctx.lineWidth=1.8;
+    ctx.beginPath(); ctx.moveTo(Math.cos(ang)*r*0.35,Math.sin(ang)*r*0.35); ctx.lineTo(Math.cos(ang)*len,Math.sin(ang)*len); ctx.stroke();
+    if(s%4===0){ ctx.fillStyle=`rgba(${col},0.9)`; ctx.beginPath(); ctx.arc(Math.cos(ang)*len,Math.sin(ang)*len,2.5,0,Math.PI*2); ctx.fill(); }
+  }
+  ctx.restore();
 }
 
 // ── CHRISTMAS pack ─────────────────────────────────────────────────────────────
