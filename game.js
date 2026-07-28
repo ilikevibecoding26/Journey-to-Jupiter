@@ -5545,7 +5545,8 @@ function drawWheelScreen(){
 
 function shopContentHeight() {
   const CARD_H=132, GAP=7, PCARD_H=148;
-  const COLS = CANVAS_W >= 900 ? 4 : CANVAS_W >= 600 ? 3 : 2;
+  const COLS = CANVAS_W >= 1200 ? 6 : CANVAS_W >= 900 ? 4 : CANVAS_W >= 600 ? 3 : 2;
+  const PCOLS = CANVAS_W >= 900 ? 2 : 1;
   if (state.customPackCreate) {
     const step = state.customPackCreate.step;
     let count = 0;
@@ -5562,8 +5563,8 @@ function shopContentHeight() {
     const vis = BACKGROUNDS.filter(b => !b.wheelOnly && (!b.secret || state.unlockedBgs.includes(b.id)));
     return Math.ceil(vis.length/COLS)*(CARD_H+GAP)-GAP;
   }
-  if (state.shopTab==='custompacks') return (52+GAP) + loadCustomPacks().length*(PCARD_H+GAP);
-  if (state.shopTab==='packs')       return PACKS.length*(PCARD_H+GAP)-GAP;
+  if (state.shopTab==='custompacks') return (52+GAP) + Math.ceil(loadCustomPacks().length/PCOLS)*(PCARD_H+GAP);
+  if (state.shopTab==='packs')       return Math.ceil(PACKS.length/PCOLS)*(PCARD_H+GAP)-GAP;
   return 0;
 }
 function clampShopScroll() {
@@ -5602,7 +5603,7 @@ function drawShopScreen() {
       ctx.beginPath(); ctx.arc(dotX, 72, 6, 0, Math.PI*2); ctx.fill();
     }
     const CARD_H=132, GAP=7;
-    const COLS = CANVAS_W >= 900 ? 4 : CANVAS_W >= 600 ? 3 : 2;
+    const COLS = CANVAS_W >= 1200 ? 6 : CANVAS_W >= 900 ? 4 : CANVAS_W >= 600 ? 3 : 2;
     const CARD_W = COLS === 2 ? 168 : Math.floor((CANVAS_W - GAP*(COLS+1)) / COLS);
     const gridLeft = (CANVAS_W - (COLS*CARD_W + (COLS-1)*GAP)) / 2;
     const GRID_TOP_BASE = 86, CLIP_BOTTOM = CANVAS_H - 70;
@@ -5705,8 +5706,9 @@ function drawShopScreen() {
   }
 
   const CARD_H = 132, GAP = 7;
-  const COLS = CANVAS_W >= 900 ? 4 : CANVAS_W >= 600 ? 3 : 2;
+  const COLS = CANVAS_W >= 1200 ? 6 : CANVAS_W >= 900 ? 4 : CANVAS_W >= 600 ? 3 : 2;
   const CARD_W = COLS === 2 ? 168 : Math.floor((CANVAS_W - GAP * (COLS + 1)) / COLS);
+  const PCOLS = CANVAS_W >= 900 ? 2 : 1;
   const gridLeft = (CANVAS_W - (COLS * CARD_W + (COLS - 1) * GAP)) / 2;
   const GRID_TOP_BASE = TAB_Y + TAB_H + 10;
   const CLIP_BOTTOM = CANVAS_H - 60;
@@ -5843,14 +5845,14 @@ function drawShopScreen() {
     }
   } else if (state.shopTab === 'custompacks') {
     // ── Custom packs ────────────────────────────────────
-    const PCARD_W = CANVAS_W - 24, PCARD_H = 148;
+    const PCARD_W = Math.floor((CANVAS_W - 24 - (PCOLS - 1) * GAP) / PCOLS), PCARD_H = 148;
     const pGridLeft = 12;
     const isVip = loadVipStart() > 0;
     const customPacks = loadCustomPacks();
     const canMakeNew = isVip || customPacks.length < 3;
     // "MAKE A NEW PACK" button at top
     const newBtnY = gridTop + 26;
-    const newBtn = { x: CANVAS_W/2, y: newBtnY, w: PCARD_W, h: 52 };
+    const newBtn = { x: CANVAS_W/2, y: newBtnY, w: CANVAS_W - 24, h: 52 };
     if (canMakeNew) {
       drawMenuButton(newBtn, '✦  MAKE A NEW PACK', '#091a09', '#1a4a1a', '#66ff66');
     } else {
@@ -5860,7 +5862,8 @@ function drawShopScreen() {
     // Custom pack cards
     for (let i = 0; i < customPacks.length; i++) {
       const cp = customPacks[i];
-      const cardX = pGridLeft, cardY = gridTop + 52 + GAP + i*(PCARD_H+GAP);
+      const col = i % PCOLS, row = Math.floor(i / PCOLS);
+      const cardX = pGridLeft + col * (PCARD_W + GAP), cardY = gridTop + 52 + GAP + row * (PCARD_H + GAP);
       const cx = cardX + PCARD_W/2, cy = cardY + PCARD_H/2;
       const isEquipped = state.equippedRocket === cp.rocket && state.equippedTail === cp.tail &&
                          state.equippedMeteor === cp.meteor && state.equippedBg === cp.bg;
@@ -5910,12 +5913,13 @@ function drawShopScreen() {
       shopButtons.push({ action: 'custompacks_delete', id: cp.id, x: dX, y: dY, w: dW, h: dH });
     }
   } else if (state.shopTab === 'packs') {
-    // ── Packs grid — 1 column, tall cards ──────────────
-    const PCARD_W = CANVAS_W - 24, PCARD_H = 148;
+    // ── Packs grid — 2 columns on wide screens ──────────────
+    const PCARD_W = Math.floor((CANVAS_W - 24 - (PCOLS - 1) * GAP) / PCOLS), PCARD_H = 148;
     const pGridLeft = 12;
     for (let i = 0; i < PACKS.length; i++) {
       const pk = PACKS[i];
-      const cardX = pGridLeft, cardY = gridTop + i * (PCARD_H + GAP);
+      const col = i % PCOLS, row = Math.floor(i / PCOLS);
+      const cardX = pGridLeft + col * (PCARD_W + GAP), cardY = gridTop + row * (PCARD_H + GAP);
       const cx = cardX + PCARD_W / 2, cy = cardY + PCARD_H / 2;
       const isOwned = state.unlockedPacks.includes(pk.id);
       // A pack is considered "equipped" when all three of its items are currently active
