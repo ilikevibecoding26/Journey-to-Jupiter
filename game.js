@@ -3074,30 +3074,6 @@ function handleTap(x, y) {
       state.eggFlash = 3.0; // show flash for 3 seconds
     }
   }
-  // ☀️ Sun egg — tap sun (≈310,115) 9 times → unlock EVERYTHING for testing
-  if (state.screen === 'start' && Math.abs(x - 310) < 55 && Math.abs(y - 115) < 55) {
-    const now = Date.now();
-    if (now - state.sunLastTap > 2000) state.sunTaps = 0;
-    state.sunTaps++; state.sunLastTap = now;
-    if (state.sunTaps >= 9) {
-      state.sunTaps = 0;
-      const allRockets = ROCKETS.map(r => r.id);
-      const allTails   = TAILS.map(t => t.id);
-      const allMeteors = METEORS.map(m => m.id);
-      const allBgs     = BACKGROUNDS.filter(b => !b.wheelOnly).map(b => b.id);
-      const allPacks   = PACKS.map(p => p.id);
-      state.unlockedRockets = allRockets; saveUnlocked(allRockets);
-      state.unlockedTails   = allTails;   saveUnlockedTails(allTails);
-      state.unlockedMeteors = allMeteors; saveUnlockedMeteors(allMeteors);
-      state.unlockedBgs     = allBgs;     saveUnlockedBgs(allBgs);
-      state.unlockedPacks   = allPacks;   saveUnlockedPacks(allPacks);
-      state.coins += 99999; saveCoins(state.coins);
-      saveVipStart(Date.now());
-      saveCustomPacksUnlocked();
-      saveCurrentProfileData();
-      state.secretFlash = { life: 4, msg: '☀️  DEV UNLOCK', sub: 'Everything unlocked + VIP + 99999 coins' };
-    }
-  }
   // 🚀 Title egg — tap "JUPITER" text area (centre, y≈144) 4 times → speed boost armed for next run
   if (state.screen === 'start' && Math.abs(x - CANVAS_W/2) < 140 && Math.abs(y - 144) < 36) {
     const now = Date.now();
