@@ -2105,6 +2105,12 @@ function checkSeasonalUnlocks() {
     if (isTime && !state.unlockedPacks.includes(p.id)) {
       state.unlockedPacks = [...state.unlockedPacks, p.id];
       saveUnlockedPacks(state.unlockedPacks);
+      // Also unlock the individual items
+      const ur = loadUnlocked(); if (!ur.includes(p.id+'_rocket')) { ur.push(p.id+'_rocket'); saveUnlocked(ur); state.unlockedRockets = ur; }
+      const ut = loadUnlockedTails(); if (!ut.includes(p.id+'_tail')) { ut.push(p.id+'_tail'); saveUnlockedTails(ut); state.unlockedTails = ut; }
+      const ub = loadUnlockedBgs(); if (!ub.includes(p.id+'_bg')) { ub.push(p.id+'_bg'); saveUnlockedBgs(ub); state.unlockedBgs = ub; }
+      const um = loadUnlockedMeteors(); if (!um.includes(p.id+'_meteor')) { um.push(p.id+'_meteor'); saveUnlockedMeteors(um); state.unlockedMeteors = um; }
+      saveCurrentProfileData();
     }
   }
 }
@@ -2129,6 +2135,7 @@ const BACKGROUNDS=[
   {id:'royale_bg',   name:'ROYALE',    cost:0, packId:'royale',   drawFn:drawPackBgRoyale   },
   {id:'neoncity_bg', name:'NEON CITY', cost:0, packId:'neoncity', drawFn:drawPackBgNeonCity },
   {id:'candy_bg',    name:'CANDY',     cost:0, packId:'candy',    drawFn:drawPackBgCandy    },
+  {id:'christmas_bg',name:'CHRISTMAS', cost:0, packId:'christmas',drawFn:drawPackBgChristmas},
   // Secret easter-egg backgrounds (cost 0, hidden from shop)
   {id:'retrowave',   name:'RETROWAVE', cost:0, secret:true,       drawFn:drawBgRetrowave    },
   {id:'matrix',      name:'MATRIX',    cost:0, secret:true,       drawFn:drawBgMatrix       },
@@ -2150,6 +2157,7 @@ const METEORS=[
   {id:'royale_meteor',   name:'ROYALE',     cost:0, packId:'royale',   drawFn:drawPackMeteorRoyale  },
   {id:'neoncity_meteor', name:'NEON CITY',  cost:0, packId:'neoncity', drawFn:drawPackMeteorNeonCity},
   {id:'candy_meteor',    name:'CANDY',      cost:0, packId:'candy',    drawFn:drawPackMeteorCandy   },
+  {id:'christmas_meteor',name:'CHRISTMAS',  cost:0, packId:'christmas',drawFn:drawPackMeteorChristmas},
 ];
 
 // ── Tail draw functions ─────────────────────────────────────────────────────
@@ -2256,6 +2264,7 @@ const TAILS=[
   {id:'royale_tail',   name:'ROYALE TRAIL',   cost:0, packId:'royale',   drawFn:(bb,bw,no)=>{const pk=PACKS.find(p=>p.id==='royale');if(pk)pk.drawTail(bb,bw,no);}},
   {id:'neoncity_tail', name:'NEON CITY TRAIL', cost:0, packId:'neoncity', drawFn:(bb,bw,no)=>{const pk=PACKS.find(p=>p.id==='neoncity');if(pk)pk.drawTail(bb,bw,no);}},
   {id:'candy_tail',    name:'CANDY TRAIL',    cost:0, packId:'candy',    drawFn:(bb,bw,no)=>{const pk=PACKS.find(p=>p.id==='candy');if(pk)pk.drawTail(bb,bw,no);}},
+  {id:'christmas_tail',name:'CHRISTMAS TRAIL',cost:0, packId:'christmas',drawFn:(bb,bw,no)=>{const pk=PACKS.find(p=>p.id==='christmas');if(pk)pk.drawTail(bb,bw,no);}},
 ];
 
 // ── Rocket shop config ────────────────────────
@@ -2355,6 +2364,7 @@ const ROCKETS = [
   {id:'royale_rocket',   name:'ROYALE SHIP',   cost:0, packId:'royale',   drawFn:(x,y)=>drawPackRocketRoyale(x,y)  },
   {id:'neoncity_rocket', name:'NEON CITY SHIP', cost:0, packId:'neoncity', drawFn:(x,y)=>drawPackRocketNeonCity(x,y)},
   {id:'candy_rocket',    name:'CANDY SHIP',    cost:0, packId:'candy',    drawFn:(x,y)=>drawPackRocketCandy(x,y)   },
+  {id:'christmas_rocket',name:'CHRISTMAS SHIP',cost:0, packId:'christmas',drawFn:(x,y)=>drawPackRocketChristmas(x,y)},
 ];
 
 function loadUnlocked() {
