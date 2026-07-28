@@ -1621,24 +1621,20 @@ function drawPackBgRoyale(){
 }
 
 function drawPackTailRoyale(bb,bw,no){
-  const N=28;
-  for(let i=0;i<N;i++){
-    const frac=i/N;
-    const px=bb[i*2],py=bb[i*2+1];
-    if(!px&&!py)continue;
-    const a=(1-frac)*0.75;
-    const sz=bw*(1-frac*0.6)*0.5;
+  const ny=bb+no,hw=bw*0.4,t=gameTime;
+  for(let i=0;i<20;i++){
+    const age=(i/20+t*0.7)%1;
+    const px=Math.sin(i*1.4+t*2)*hw*(0.3+age*0.7);
+    const py=ny+age*60;
+    const a=0.8*(1-age);
+    const sz=Math.max(0.5,5*(1-age));
     ctx.save();ctx.translate(px,py);
-    // Gold core
     ctx.fillStyle=`rgba(220,175,25,${a*0.85})`;
     ctx.beginPath();ctx.arc(0,0,sz,0,Math.PI*2);ctx.fill();
-    // Purple sparkle
-    if(i%3===0){ctx.fillStyle=`rgba(155,35,215,${a*0.65})`;ctx.beginPath();ctx.arc(sz*0.55,-sz*0.4,sz*0.42,0,Math.PI*2);ctx.fill();}
-    // Star fleck
+    if(i%3===0){ctx.fillStyle=`rgba(155,35,215,${a*0.65})`;ctx.beginPath();ctx.arc(sz*0.55,-sz*0.4,sz*0.5,0,Math.PI*2);ctx.fill();}
     if(i%4===0){
-      ctx.fillStyle=`rgba(255,225,80,${a})`;
-      ctx.beginPath();
-      for(let s=0;s<4;s++){const ang=s*Math.PI/2;s===0?ctx.moveTo(Math.cos(ang)*sz*0.4,Math.sin(ang)*sz*0.4):ctx.lineTo(Math.cos(ang)*sz*0.4,Math.sin(ang)*sz*0.4);}
+      ctx.fillStyle=`rgba(255,225,80,${a})`;ctx.beginPath();
+      for(let s=0;s<4;s++){const ang=s*Math.PI/2;s===0?ctx.moveTo(Math.cos(ang)*sz*0.5,Math.sin(ang)*sz*0.5):ctx.lineTo(Math.cos(ang)*sz*0.5,Math.sin(ang)*sz*0.5);}
       ctx.closePath();ctx.fill();
     }
     ctx.restore();
@@ -1740,24 +1736,22 @@ function drawPackBgCandy(){
 }
 
 function drawPackTailCandy(bb,bw,no){
-  const N=28;
-  const bubCols=['rgba(255,150,200,{a})','rgba(150,200,255,{a})','rgba(200,150,255,{a})','rgba(255,220,100,{a})'];
-  for(let i=0;i<N;i++){
-    const frac=i/N;
-    const px=bb[i*2],py=bb[i*2+1];
-    if(!px&&!py)continue;
-    const a=(1-frac)*0.75;
-    const sz=bw*(1-frac*0.5)*0.55;
+  const ny=bb+no,hw=bw*0.42,t=gameTime;
+  const bubCols=['255,150,200','150,200,255','200,150,255','255,220,100'];
+  for(let i=0;i<18;i++){
+    const age=(i/18+t*0.65)%1;
+    const px=Math.sin(i*1.2+t*1.6)*hw*(0.2+age*0.8);
+    const py=ny+age*55;
+    const a=0.8*(1-age);
+    const sz=Math.max(0.5,6*(1-age));
     ctx.save();ctx.translate(px,py);
-    // Pastel bubble
-    const col=bubCols[i%bubCols.length].replace('{a}',a*0.7);
+    const col=bubCols[i%bubCols.length];
     const cg=ctx.createRadialGradient(-sz*0.3,-sz*0.3,0,0,0,sz);
-    cg.addColorStop(0,'rgba(255,255,255,'+a*0.5+')');cg.addColorStop(0.5,col);cg.addColorStop(1,col.replace(a*0.7,0));
+    cg.addColorStop(0,`rgba(255,255,255,${a*0.5})`);cg.addColorStop(0.5,`rgba(${col},${a*0.7})`);cg.addColorStop(1,`rgba(${col},0)`);
     ctx.fillStyle=cg;ctx.beginPath();ctx.arc(0,0,sz,0,Math.PI*2);ctx.fill();
-    // Sprinkle fleck
     if(i%3===0){
       const sc=['#ff4488','#ff8800','#44cc44','#4488ff'][i%4];
-      ctx.fillStyle=sc;ctx.save();ctx.rotate(i*0.7);ctx.fillRect(-5,-1.5,10,3);ctx.restore();
+      ctx.fillStyle=sc;ctx.save();ctx.rotate(i*0.7);ctx.fillRect(-4,-1.5,8,3);ctx.restore();
     }
     ctx.restore();
   }
@@ -1885,20 +1879,17 @@ function drawPackBgNeonCity(){
 }
 
 function drawPackTailNeonCity(bb,bw,no){
-  const N=30;
-  for(let i=0;i<N;i++){
-    const frac=i/N;
-    const px=bb[i*2],py=bb[i*2+1];
-    if(!px&&!py)continue;
-    const a=(1-frac)*0.8;
-    const sz=bw*(1-frac*0.55)*0.5;
+  const ny=bb+no,hw=bw*0.38,t=gameTime;
+  for(let i=0;i<20;i++){
+    const age=(i/20+t*0.75)%1;
+    const px=Math.sin(i*1.5+t*2.2)*hw*(0.25+age*0.75);
+    const py=ny+age*58;
+    const a=0.85*(1-age);
+    const sz=Math.max(0.5,5*(1-age));
     ctx.save();ctx.translate(px,py);
-    // Cyan core
     ctx.fillStyle=`rgba(0,220,255,${a*0.7})`;
     ctx.beginPath();ctx.arc(0,0,sz,0,Math.PI*2);ctx.fill();
-    // Pink outer
-    if(i%2===0){ctx.fillStyle=`rgba(255,0,180,${a*0.5})`;ctx.beginPath();ctx.arc(sz*0.4,sz*0.3,sz*0.5,0,Math.PI*2);ctx.fill();}
-    // Electric spark
+    if(i%2===0){ctx.fillStyle=`rgba(255,0,180,${a*0.55})`;ctx.beginPath();ctx.arc(sz*0.4,sz*0.3,sz*0.55,0,Math.PI*2);ctx.fill();}
     if(i%5===0){
       ctx.strokeStyle=`rgba(180,100,255,${a})`;ctx.lineWidth=1.2;
       ctx.beginPath();ctx.moveTo(-sz,0);ctx.lineTo(-sz*0.3,sz*0.5);ctx.lineTo(sz*0.4,-sz*0.3);ctx.lineTo(sz,0);ctx.stroke();
