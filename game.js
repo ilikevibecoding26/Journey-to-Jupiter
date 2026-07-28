@@ -148,8 +148,9 @@ function getNameInputEl() {
   return _nameInputEl;
 }
 
-function showNameInput() {
+function showNameInput(maxLen) {
   const el   = getNameInputEl();
+  el.maxLength = maxLen || 8;
   el.value   = '';
   el.style.display = 'block';
   // Position over the canvas input zone
@@ -3245,7 +3246,7 @@ function handleTap(x, y) {
               state.shopTab = 'custompacks'; state.shopScrollY = 0;
               state.screen = 'shop';
             };
-            showNameInput();
+            showNameInput(40);
           }
           break;
         }
