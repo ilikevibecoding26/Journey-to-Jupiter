@@ -2081,7 +2081,33 @@ const PACKS=[
   {id:'candy',   name:'CANDY',   emoji:'🍬',cost:0, vip:true, vipMonth:3,
     drawRocket:drawPackRocketCandy,    drawTail:drawPackTailCandy,
     drawBg:drawPackBgCandy,            drawMeteor:drawPackMeteorCandy},
+  {id:'christmas', name:'CHRISTMAS', emoji:'🎄', cost:0, seasonal:true, seasonMonth:12, seasonDay:1,
+    drawRocket:drawPackRocketChristmas, drawTail:drawPackTailChristmas,
+    drawBg:drawPackBgChristmas,         drawMeteor:drawPackMeteorChristmas},
 ];
+
+function visiblePacks() {
+  const now = new Date();
+  const m = now.getMonth() + 1, d = now.getDate();
+  return PACKS.filter(p => {
+    if (!p.seasonal) return true;
+    const unlocked = (typeof state !== 'undefined') && state.unlockedPacks && state.unlockedPacks.includes(p.id);
+    if (unlocked) return true;
+    return (m > p.seasonMonth) || (m === p.seasonMonth && d >= p.seasonDay);
+  });
+}
+function checkSeasonalUnlocks() {
+  const now = new Date();
+  const m = now.getMonth() + 1, d = now.getDate();
+  for (const p of PACKS) {
+    if (!p.seasonal) continue;
+    const isTime = (m > p.seasonMonth) || (m === p.seasonMonth && d >= p.seasonDay);
+    if (isTime && !state.unlockedPacks.includes(p.id)) {
+      state.unlockedPacks = [...state.unlockedPacks, p.id];
+      saveUnlockedPacks(state.unlockedPacks);
+    }
+  }
+}
 
 const BACKGROUNDS=[
   {id:'classic',   name:'CLASSIC',   cost:0,  drawFn:drawBgClassic  },
@@ -2492,6 +2518,7 @@ function loadProfileIntoSession(idx) {
   // Load ghost time for popup display
   const gr = loadGhostRun();
   state.ghostTime = gr ? gr.time : null;
+  checkSeasonalUnlocks();
 }
 function saveCurrentProfileData() {
   const idx      = getActiveProfileIdx();
@@ -3072,6 +3099,30 @@ function handleTap(x, y) {
       saveUnlockedBgs(allBgs);
       localStorage.setItem('jtj_unlocked_packs', JSON.stringify(allPacks));
       state.eggFlash = 3.0; // show flash for 3 seconds
+    }
+  }
+  // ☀️ Sun egg — tap sun (≈310,115) 9 times → unlock EVERYTHING for testing
+  if (state.screen === 'start' && Math.abs(x - 310) < 55 && Math.abs(y - 115) < 55) {
+    const now = Date.now();
+    if (now - state.sunLastTap > 2000) state.sunTaps = 0;
+    state.sunTaps++; state.sunLastTap = now;
+    if (state.sunTaps >= 9) {
+      state.sunTaps = 0;
+      const allRockets = ROCKETS.map(r => r.id);
+      const allTails   = TAILS.map(t => t.id);
+      const allMeteors = METEORS.map(m => m.id);
+      const allBgs     = BACKGROUNDS.filter(b => !b.wheelOnly).map(b => b.id);
+      const allPacks   = PACKS.map(p => p.id);
+      state.unlockedRockets = allRockets; saveUnlocked(allRockets);
+      state.unlockedTails   = allTails;   saveUnlockedTails(allTails);
+      state.unlockedMeteors = allMeteors; saveUnlockedMeteors(allMeteors);
+      state.unlockedBgs     = allBgs;     saveUnlockedBgs(allBgs);
+      state.unlockedPacks   = allPacks;   saveUnlockedPacks(allPacks);
+      state.coins += 99999; saveCoins(state.coins);
+      saveVipStart(Date.now());
+      saveCustomPacksUnlocked();
+      saveCurrentProfileData();
+      state.secretFlash = { life: 4, msg: '☀️  DEV UNLOCK', sub: 'Everything unlocked + VIP + 99999 coins' };
     }
   }
   // 🚀 Title egg — tap "JUPITER" text area (centre, y≈144) 4 times → speed boost armed for next run
@@ -5412,6 +5463,126 @@ function drawBgMatrix() {
   }
 }
 
+// ── CHRISTMAS pack ─────────────────────────────────────────────────────────────
+function drawPackBgChristmas() {
+  const sky = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+  sky.addColorStop(0, '#010a1a'); sky.addColorStop(0.6, '#021220'); sky.addColorStop(1, '#031828');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  // Stars
+  for (let i = 0; i < 70; i++) {
+    const sx = (i * 237.7) % CANVAS_W, sy = (i * 131.3) % (CANVAS_H * 0.65);
+    const a = 0.3 + 0.5 * Math.sin(gameTime * 1.2 + i * 0.8);
+    ctx.fillStyle = `rgba(255,255,220,${a})`; ctx.beginPath(); ctx.arc(sx, sy, 1 + (i%2), 0, Math.PI*2); ctx.fill();
+  }
+  // Moon
+  const mx = CANVAS_W * 0.8, my = CANVAS_H * 0.14;
+  ctx.beginPath(); ctx.arc(mx, my, 22, 0, Math.PI*2); ctx.fillStyle = '#ddeeff'; ctx.fill();
+  // Pine trees
+  const groundY = CANVAS_H * 0.8;
+  const treeXs = [0.04,0.14,0.26,0.38,0.5,0.62,0.74,0.86,0.96];
+  for (const tx of treeXs) {
+    const tcx = CANVAS_W * tx, th = CANVAS_H * (0.2 + ((tx*7)%0.12)), tw = th * 0.48;
+    for (let layer = 0; layer < 3; layer++) {
+      const ly = groundY - th * (0.35 + layer * 0.22), lw = tw * (1 - layer * 0.22);
+      ctx.beginPath(); ctx.moveTo(tcx, ly - th*0.4); ctx.lineTo(tcx - lw/2, ly); ctx.lineTo(tcx + lw/2, ly); ctx.closePath();
+      ctx.fillStyle = layer === 1 ? '#0d3318' : '#0a2810'; ctx.fill();
+    }
+  }
+  // Snowy ground
+  const gnd = ctx.createLinearGradient(0, groundY, 0, CANVAS_H);
+  gnd.addColorStop(0, '#c8ddf0'); gnd.addColorStop(1, '#6090b8');
+  ctx.fillStyle = gnd; ctx.fillRect(0, groundY, CANVAS_W, CANVAS_H - groundY + 5);
+  // Snow falling
+  for (let i = 0; i < 55; i++) {
+    const speed = 0.22 + (i % 4) * 0.07;
+    const t = (gameTime * speed + i * 0.53) % 1;
+    const sx = (i * 193.7 + Math.sin(gameTime * 0.5 + i) * 18) % CANVAS_W;
+    const sy = t * (CANVAS_H + 20) - 10;
+    const a = 0.45 + Math.sin(gameTime + i * 1.4) * 0.25;
+    ctx.fillStyle = `rgba(220,235,255,${a})`; ctx.beginPath(); ctx.arc(sx, sy, 1.5 + (i%3)*0.7, 0, Math.PI*2); ctx.fill();
+  }
+  // Festive light string
+  const lightCols = ['#ff3333','#33ff33','#ffdd00','#ff66ff','#33ccff'];
+  for (let i = 0; i < 22; i++) {
+    const lx = (i / 21) * CANVAS_W, ly = 38 + Math.sin(i * 0.85) * 14;
+    if (Math.sin(gameTime * 3 + i * 1.1) > 0.1) {
+      const col = lightCols[i % lightCols.length];
+      ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI*2); ctx.fillStyle = col; ctx.fill();
+      const g = ctx.createRadialGradient(lx, ly, 0, lx, ly, 10);
+      g.addColorStop(0, col + '88'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(lx, ly, 10, 0, Math.PI*2); ctx.fill();
+    }
+  }
+}
+function drawPackTailChristmas(bb, bw, no) {
+  const ny = bb + no, hw = bw * 0.45, t = gameTime;
+  const cols = ['255,40,40','255,200,0','40,200,40','200,220,255'];
+  for (let i = 0; i < 18; i++) {
+    const age = (i / 18 + t * 0.6) % 1;
+    const px = Math.sin(i * 1.3 + t * 1.8) * hw * (0.5 + age * 0.5);
+    const py = ny + age * 60;
+    const a = 0.85 * (1 - age);
+    ctx.save(); ctx.translate(px, py); ctx.rotate(t * 2 + i);
+    ctx.fillStyle = `rgba(${cols[i % cols.length]},${a})`;
+    for (let s = 0; s < 4; s++) { ctx.rotate(Math.PI / 4); ctx.fillRect(-1, -4*(1-age*0.4), 2, 8*(1-age*0.4)); }
+    ctx.restore();
+  }
+}
+function drawPackRocketChristmas(x, y) {
+  ctx.save(); ctx.translate(x, y);
+  const bw = 30, bh = 54, nh = 44, bt = -bh/2, bb = bh/2;
+  // Green fins
+  for (const s of [-1, 1]) {
+    ctx.beginPath(); ctx.moveTo(s*bw/2, bb-16); ctx.lineTo(s*(bw/2+16), bb+12); ctx.lineTo(s*bw/2, bb+4); ctx.closePath();
+    ctx.fillStyle = '#0a5520'; ctx.fill();
+  }
+  // Red body
+  const bg = ctx.createLinearGradient(-bw/2, 0, bw/2, 0);
+  bg.addColorStop(0,'#8b0000'); bg.addColorStop(0.4,'#cc1111'); bg.addColorStop(0.6,'#dd2222'); bg.addColorStop(1,'#8b0000');
+  ctx.beginPath(); ctx.roundRect(-bw/2, bt, bw, bh, [3,3,6,6]); ctx.fillStyle = bg; ctx.fill();
+  // White candy-cane stripes
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.fillRect(-bw/2, bt+bh*0.24, bw, 5); ctx.fillRect(-bw/2, bt+bh*0.54, bw, 5);
+  // Red nose cone
+  ctx.beginPath(); ctx.moveTo(-bw/2, bt); ctx.quadraticCurveTo(0, bt-nh*0.6, 0, bt-nh); ctx.quadraticCurveTo(0, bt-nh*0.6, bw/2, bt); ctx.closePath();
+  const ng = ctx.createLinearGradient(-bw/2, bt, bw/2, bt);
+  ng.addColorStop(0,'#880000'); ng.addColorStop(0.5,'#cc1111'); ng.addColorStop(1,'#880000');
+  ctx.fillStyle = ng; ctx.fill();
+  // Gold star at tip
+  ctx.save(); ctx.translate(0, bt - nh - 7); ctx.fillStyle = '#ffd700';
+  for (let i = 0; i < 5; i++) {
+    ctx.rotate(Math.PI * 2 / 5);
+    ctx.beginPath(); ctx.moveTo(0,-8); ctx.lineTo(3,-3); ctx.lineTo(8,-3); ctx.lineTo(4,1); ctx.lineTo(5,7); ctx.lineTo(0,4); ctx.lineTo(-5,7); ctx.lineTo(-4,1); ctx.lineTo(-8,-3); ctx.lineTo(-3,-3); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+  // Nozzle
+  ctx.beginPath(); ctx.moveTo(-bw*0.4,bb); ctx.lineTo(bw*0.4,bb); ctx.lineTo(bw*0.5,bb+10); ctx.lineTo(-bw*0.5,bb+10); ctx.closePath();
+  ctx.fillStyle = '#1a0a0a'; ctx.fill();
+  drawPackTailChristmas(bb, bw, 10);
+  ctx.restore();
+}
+function drawPackMeteorChristmas(m) {
+  ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(m.rotation);
+  const r = m.rx;
+  const ornCols = ['#cc1111','#0a8a0a','#cc8800','#6611aa'];
+  const col = ornCols[Math.floor((m.x/100 + m.y/77)) % ornCols.length];
+  const glow = ctx.createRadialGradient(0,0,r*0.3,0,0,r*1.5);
+  glow.addColorStop(0, col+'55'); glow.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(0,0,r*1.5,0,Math.PI*2); ctx.fill();
+  const ball = ctx.createRadialGradient(-r*0.3,-r*0.3,1,0,0,r*1.1);
+  ball.addColorStop(0,'#ffffff'); ball.addColorStop(0.2,col); ball.addColorStop(1,'#000000');
+  ctx.beginPath(); ctx.ellipse(0,0,m.rx,m.ry,0,0,Math.PI*2); ctx.fillStyle = ball; ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=0.8; ctx.stroke();
+  // Cap
+  ctx.beginPath(); ctx.ellipse(0,-m.ry*0.85,r*0.28,r*0.16,0,0,Math.PI*2); ctx.fillStyle='#c8c8a0'; ctx.fill();
+  // Hook
+  ctx.beginPath(); ctx.arc(0,-m.ry*0.85-r*0.28,r*0.22,Math.PI,Math.PI*2);
+  ctx.strokeStyle='#a0a080'; ctx.lineWidth=2; ctx.stroke();
+  // Shine
+  ctx.beginPath(); ctx.arc(-r*0.28,-r*0.28,r*0.18,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.65)'; ctx.fill();
+  ctx.restore();
+}
+
 // Register lucky cosmetics (wheel-only, cost 0, hidden from shop)
 // Add to arrays so equip system works — filtered out of shop by wheelOnly flag
 function registerLuckyCosmetics(){
@@ -5540,7 +5711,7 @@ function shopContentHeight() {
     return Math.ceil(vis.length/COLS)*(CARD_H+GAP)-GAP;
   }
   if (state.shopTab==='custompacks') return (52+GAP) + Math.ceil(loadCustomPacks().length/PCOLS)*(PCARD_H+GAP);
-  if (state.shopTab==='packs')       return Math.ceil(PACKS.length/PCOLS)*(PCARD_H+GAP)-GAP;
+  if (state.shopTab==='packs')       return Math.ceil(visiblePacks().length/PCOLS)*(PCARD_H+GAP)-GAP;
   return 0;
 }
 function clampShopScroll() {
@@ -5892,8 +6063,9 @@ function drawShopScreen() {
     // ── Packs grid — 2 columns on wide screens ──────────────
     const PCARD_W = Math.floor((CANVAS_W - 24 - (PCOLS - 1) * GAP) / PCOLS), PCARD_H = 148;
     const pGridLeft = 12;
-    for (let i = 0; i < PACKS.length; i++) {
-      const pk = PACKS[i];
+    const vpacks = visiblePacks();
+    for (let i = 0; i < vpacks.length; i++) {
+      const pk = vpacks[i];
       const col = i % PCOLS, row = Math.floor(i / PCOLS);
       const cardX = pGridLeft + col * (PCARD_W + GAP), cardY = gridTop + row * (PCARD_H + GAP);
       const cx = cardX + PCARD_W / 2, cy = cardY + PCARD_H / 2;
