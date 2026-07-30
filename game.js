@@ -60,11 +60,11 @@ function showAuthInput() {
 }
 
 function loadAuthSession() {
-  try { return JSON.parse(localStorage.getItem('jtj_auth') || 'null'); } catch { return null; }
+  try { return JSON.parse(sessionStorage.getItem('jtj_auth') || 'null'); } catch { return null; }
 }
 function saveAuthSession(obj) {
-  if (obj) localStorage.setItem('jtj_auth', JSON.stringify(obj));
-  else localStorage.removeItem('jtj_auth');
+  if (obj) sessionStorage.setItem('jtj_auth', JSON.stringify(obj));
+  else sessionStorage.removeItem('jtj_auth');
 }
 
 const canvas = document.getElementById('gameCanvas');
@@ -2525,10 +2525,10 @@ function saveProfiles(profiles) {
   localStorage.setItem('jtj_profiles', JSON.stringify(profiles));
 }
 function getActiveProfileIdx() {
-  return parseInt(localStorage.getItem('jtj_active_profile') || '-1', 10);
+  return parseInt(sessionStorage.getItem('jtj_active_profile') || '-1', 10);
 }
 function setActiveProfileIdx(idx) {
-  localStorage.setItem('jtj_active_profile', String(idx));
+  sessionStorage.setItem('jtj_active_profile', String(idx));
 }
 function getProfileRank(p) {
   const c = p.coins || 0;
