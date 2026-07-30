@@ -5715,40 +5715,61 @@ function drawPackBgNewYear(){
   const sky=ctx.createLinearGradient(0,0,0,CANVAS_H);
   sky.addColorStop(0,'#000005'); sky.addColorStop(1,'#050015');
   ctx.fillStyle=sky; ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
+  // Stars
   for(let i=0;i<80;i++){
     const sx=(i*179.3)%CANVAS_W,sy=(i*109.7)%(CANVAS_H*0.85);
     const a=0.3+0.5*Math.sin(gameTime*1.8+i*0.7);
     ctx.fillStyle=`rgba(255,255,220,${a})`; ctx.beginPath(); ctx.arc(sx,sy,1+(i%3)*0.4,0,Math.PI*2); ctx.fill();
   }
-  // Firework bursts
   const t=gameTime;
-  const fwSpots=[{x:0.22,y:0.18,c:'255,215,0'},{x:0.68,y:0.12,c:'255,80,120'},{x:0.45,y:0.28,c:'80,200,255'},{x:0.15,y:0.34,c:'150,255,80'},{x:0.8,y:0.32,c:'255,120,50'}];
-  for(const [fi,fw] of fwSpots.entries()){
-    const phase=(t*0.5+fi*0.2)%1;
-    const rad=phase<0.5?phase*2*55:(1-(phase-0.5)*2)*55;
-    const a=phase<0.5?phase*2*0.8:(1-(phase-0.5)*2)*0.8;
-    const bx=fw.x*CANVAS_W,by=fw.y*CANVAS_H;
-    for(let s=0;s<12;s++){
-      const ang=s/12*Math.PI*2;
-      ctx.strokeStyle=`rgba(${fw.c},${a})`; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.moveTo(bx+Math.cos(ang)*rad*0.3,by+Math.sin(ang)*rad*0.3); ctx.lineTo(bx+Math.cos(ang)*rad,by+Math.sin(ang)*rad); ctx.stroke();
-      ctx.fillStyle=`rgba(${fw.c},${a*0.9})`; ctx.beginPath(); ctx.arc(bx+Math.cos(ang)*rad,by+Math.sin(ang)*rad,2,0,Math.PI*2); ctx.fill();
-    }
-  }
-  // Gold confetti
-  const confCols=['255,215,0','220,220,220','255,80,120','80,200,255'];
-  for(let i=0;i<40;i++){
-    const cf=((i*0.12+t*0.08)%1);
-    const cx2=((i*0.17+Math.sin(t+i)*0.03)%1)*CANVAS_W, cy2=cf*CANVAS_H;
-    ctx.save(); ctx.translate(cx2,cy2); ctx.rotate(t*2+i*0.8);
-    ctx.fillStyle=`rgba(${confCols[i%confCols.length]},0.7)`; ctx.fillRect(-4,-1.5,8,3);
+  // Countdown ball drop — glowing orb descending from top
+  const ballY = CANVAS_H * 0.08 + ((t * 0.05) % 1) * CANVAS_H * 0.55;
+  const ballX = CANVAS_W * 0.5;
+  const ballR = 22;
+  // Pole
+  ctx.strokeStyle='rgba(180,160,120,0.5)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(ballX,0); ctx.lineTo(ballX,ballY-ballR); ctx.stroke();
+  // Ball glow
+  const ballGlow=ctx.createRadialGradient(ballX,ballY,4,ballX,ballY,55);
+  ballGlow.addColorStop(0,'rgba(255,215,80,0.5)'); ballGlow.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=ballGlow; ctx.beginPath(); ctx.arc(ballX,ballY,55,0,Math.PI*2); ctx.fill();
+  // Ball body — silver/gold with tile pattern
+  const ballG=ctx.createRadialGradient(ballX-8,ballY-8,2,ballX,ballY,ballR);
+  ballG.addColorStop(0,'#ffffff'); ballG.addColorStop(0.3,'#ffd700'); ballG.addColorStop(0.7,'#c8a000'); ballG.addColorStop(1,'#806000');
+  ctx.fillStyle=ballG; ctx.beginPath(); ctx.arc(ballX,ballY,ballR,0,Math.PI*2); ctx.fill();
+  // Tile lines on ball
+  ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=0.8;
+  for(let ti=-2;ti<=2;ti++){
+    ctx.beginPath(); ctx.arc(ballX,ballY,ballR,0,Math.PI*2); ctx.save();
+    ctx.translate(ballX,ballY); ctx.rotate(ti*Math.PI/5);
+    ctx.beginPath(); ctx.moveTo(-ballR,0); ctx.lineTo(ballR,0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-ballR); ctx.lineTo(0,ballR); ctx.stroke();
     ctx.restore();
   }
-  ctx.fillStyle='#020010'; ctx.fillRect(0,CANVAS_H*0.85,CANVAS_W,CANVAS_H);
+  // Streamers falling
+  const streamCols=['255,215,0','220,220,220','255,100,180','100,200,255','180,255,100'];
+  for(let i=0;i<50;i++){
+    const sf=((i*0.11+t*0.12)%1);
+    const sx2=((i*0.19+Math.sin(t*0.8+i)*0.04)%1)*CANVAS_W;
+    const sy2=sf*CANVAS_H;
+    const col=streamCols[i%streamCols.length];
+    ctx.save(); ctx.translate(sx2,sy2); ctx.rotate(t*1.5+i*0.9);
+    ctx.fillStyle=`rgba(${col},0.75)`; ctx.fillRect(-5,-1.5,10,3);
+    ctx.restore();
+  }
+  // City skyline silhouette at bottom
+  const skylineY=CANVAS_H*0.82;
+  ctx.fillStyle='rgba(8,5,20,0.9)';
+  const blds=[[0,0.08],[0.07,0.12],[0.14,0.09],[0.2,0.15],[0.27,0.1],[0.33,0.13],[0.4,0.08],[0.47,0.16],[0.54,0.11],[0.6,0.09],[0.67,0.14],[0.74,0.1],[0.8,0.12],[0.87,0.08],[0.93,0.11],[1,0.07]];
+  for(let b=0;b<blds.length-1;b++){
+    const bx1=blds[b][0]*CANVAS_W,bh1=blds[b][1]*CANVAS_H;
+    const bx2=blds[b+1][0]*CANVAS_W;
+    ctx.fillRect(bx1,skylineY-bh1,bx2-bx1,bh1+CANVAS_H);
+  }
 }
 function drawPackTailNewYear(bb,bw,no){
   const ny=bb+no,hw=bw*0.42,t=gameTime;
-  const cols=['255,215,0','220,220,220','255,80,120','80,200,255','150,255,80'];
+  const cols=['255,215,0','220,220,220','255,100,180','100,200,255','180,255,100'];
   for(let i=0;i<20;i++){
     const age=(i/20+t*0.7)%1;
     const px=Math.sin(i*1.4+t*2)*hw*(0.15+age*0.85), py=ny+age*60;
@@ -5760,46 +5781,80 @@ function drawPackTailNewYear(bb,bw,no){
 }
 function drawPackRocketNewYear(x,y){
   ctx.save(); ctx.translate(x,y);
-  const bw=26,bh=54,bb=bh/2,bt=-bh/2;
+  const bw=30,bh=52,bb=bh/2,bt=-bh/2;
+  // Curly ribbon streamers as fins
   for(const s of[-1,1]){
-    ctx.beginPath(); ctx.moveTo(s*bw/2,bb-14); ctx.lineTo(s*(bw/2+14),bb+10); ctx.lineTo(s*bw/2,bb+2); ctx.closePath();
-    ctx.fillStyle='#c8a020'; ctx.fill();
+    ctx.save(); ctx.translate(s*(bw/2+4),bb-4);
+    for(let curl=0;curl<3;curl++){
+      const cy=curl*8;
+      ctx.strokeStyle=['#ff6eb4','#ffd700','#66ccff'][curl]; ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.arc(s*5,cy,5,Math.PI*0.5,Math.PI*2.5); ctx.stroke();
+    }
+    ctx.restore();
   }
-  const bg=ctx.createLinearGradient(-bw/2,0,bw/2,0);
-  bg.addColorStop(0,'#5a4800'); bg.addColorStop(0.2,'#b88c10'); bg.addColorStop(0.5,'#ffd700'); bg.addColorStop(0.8,'#b88c10'); bg.addColorStop(1,'#5a4800');
-  ctx.beginPath(); ctx.roundRect(-bw/2,bt,bw,bh,[3,3,6,6]); ctx.fillStyle=bg; ctx.fill();
-  ctx.fillStyle='rgba(220,220,220,0.8)'; ctx.fillRect(-bw/2,bt+bh*0.35,bw,5);
-  // Star on body
-  ctx.save(); ctx.translate(0,bt+bh*0.62); ctx.fillStyle='#fff8c0';
-  for(let i=0;i<5;i++){ ctx.rotate(Math.PI*2/5); ctx.beginPath(); ctx.moveTo(0,-7); ctx.lineTo(2.5,-2.5); ctx.lineTo(7,-2.5); ctx.lineTo(3.5,1.5); ctx.lineTo(4.5,6.5); ctx.lineTo(0,3.5); ctx.lineTo(-4.5,6.5); ctx.lineTo(-3.5,1.5); ctx.lineTo(-7,-2.5); ctx.lineTo(-2.5,-2.5); ctx.closePath(); ctx.fill(); }
-  ctx.restore();
-  const ng=ctx.createLinearGradient(-bw/2,bt,bw/2,bt);
-  ng.addColorStop(0,'#8a6000'); ng.addColorStop(0.5,'#ffd700'); ng.addColorStop(1,'#8a6000');
-  ctx.beginPath(); ctx.moveTo(-bw/2,bt); ctx.quadraticCurveTo(0,bt-26,0,bt-44); ctx.quadraticCurveTo(0,bt-26,bw/2,bt); ctx.closePath(); ctx.fillStyle=ng; ctx.fill();
+  // Party hat body — colorful cone shape as main body
+  // Base band
+  ctx.fillStyle='#ffeeaa';
+  ctx.beginPath(); ctx.roundRect(-bw/2,bt+bh*0.55,bw,bh*0.45,[0,0,6,6]); ctx.fill();
+  // Hat cone (body tapers toward top) — purple with colored polka dots
+  const hatG=ctx.createLinearGradient(-bw/2,bt,bw/2,bt);
+  hatG.addColorStop(0,'#7722cc'); hatG.addColorStop(0.5,'#aa44ff'); hatG.addColorStop(1,'#7722cc');
+  ctx.beginPath(); ctx.moveTo(-bw/2,bt+bh*0.55); ctx.lineTo(-bw*0.15,bt); ctx.lineTo(bw*0.15,bt); ctx.lineTo(bw/2,bt+bh*0.55); ctx.closePath();
+  ctx.fillStyle=hatG; ctx.fill();
+  // Polka dots on hat
+  const dotCols=['#ffd700','#ff6eb4','#66ffcc','#ff8833'];
+  for(let d=0;d<6;d++){
+    const dx=(d%2===0?-1:1)*(4+d%3*3), dy=bt+bh*(0.1+d*0.07);
+    ctx.fillStyle=dotCols[d%dotCols.length]; ctx.beginPath(); ctx.arc(dx,dy,3,0,Math.PI*2); ctx.fill();
+  }
+  // Gold elastic band
+  ctx.strokeStyle='#ffd700'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(-bw/2,bt+bh*0.55); ctx.lineTo(bw/2,bt+bh*0.55); ctx.stroke();
+  // Pom-pom at tip
+  const pomY=bt-10;
+  for(let p=0;p<7;p++){
+    const pa=p/7*Math.PI*2, pr=6;
+    ctx.fillStyle=dotCols[p%dotCols.length]; ctx.beginPath(); ctx.arc(Math.cos(pa)*pr*0.6,pomY+Math.sin(pa)*pr*0.6,4,0,Math.PI*2); ctx.fill();
+  }
+  ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(0,pomY,3,0,Math.PI*2); ctx.fill();
+  // Nozzle
   ctx.beginPath(); ctx.moveTo(-bw*0.42,bb); ctx.lineTo(bw*0.42,bb); ctx.lineTo(bw*0.52,bb+10); ctx.lineTo(-bw*0.52,bb+10); ctx.closePath();
-  ctx.fillStyle='#2a2000'; ctx.fill();
+  ctx.fillStyle='#3a1a66'; ctx.fill();
   drawPackTailNewYear(bb,bw,10);
   ctx.restore();
 }
 function drawPackMeteorNewYear(m){
-  ctx.save(); ctx.translate(m.x,m.y);
+  ctx.save(); ctx.translate(m.x,m.y); ctx.rotate(m.rotation);
   const r=m.rx,t=gameTime;
-  const fireCols=['255,215,0','255,80,120','80,200,255','150,255,80','255,120,50'];
-  const col=fireCols[Math.floor((m.x*0.01+m.y*0.007+t*0.3))%fireCols.length];
-  const cg=ctx.createRadialGradient(0,0,0,0,0,r*0.5);
-  cg.addColorStop(0,'rgba(255,255,255,0.9)'); cg.addColorStop(0.5,`rgba(${col},0.8)`); cg.addColorStop(1,`rgba(${col},0)`);
-  ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(0,0,r*0.5,0,Math.PI*2); ctx.fill();
-  for(let s=0;s<12;s++){
-    const ang=s/12*Math.PI*2+t*0.5, len=r*(0.7+Math.sin(t*2+s)*0.3);
-    ctx.strokeStyle=`rgba(${col},0.8)`; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.moveTo(Math.cos(ang)*r*0.4,Math.sin(ang)*r*0.4); ctx.lineTo(Math.cos(ang)*len,Math.sin(ang)*len); ctx.stroke();
-    ctx.fillStyle=`rgba(${col},0.9)`; ctx.beginPath(); ctx.arc(Math.cos(ang)*len,Math.sin(ang)*len,2.5,0,Math.PI*2); ctx.fill();
+  // Disco ball — silver sphere with reflective tiles
+  const ballG=ctx.createRadialGradient(-r*0.3,-r*0.3,1,0,0,r);
+  ballG.addColorStop(0,'#ffffff'); ballG.addColorStop(0.3,'#dddddd'); ballG.addColorStop(0.7,'#888888'); ballG.addColorStop(1,'#333333');
+  ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fillStyle=ballG; ctx.fill();
+  // Tile grid
+  const tileSize=r*0.28;
+  const tileCols=['rgba(255,215,0,0.8)','rgba(255,100,180,0.8)','rgba(100,200,255,0.8)','rgba(180,255,100,0.8)','rgba(255,255,255,0.9)'];
+  ctx.save(); ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.clip();
+  for(let tx=-3;tx<=3;tx++){
+    for(let ty=-3;ty<=3;ty++){
+      const cx2=tx*tileSize*1.05, cy2=ty*tileSize*1.05;
+      if(cx2*cx2+cy2*cy2>r*r*0.9) continue;
+      const shine=Math.sin(t*3+tx*0.8+ty*1.1)>0.3;
+      ctx.fillStyle=shine?tileCols[(tx+ty+4)%tileCols.length]:'rgba(100,100,120,0.6)';
+      ctx.fillRect(cx2-tileSize*0.45,cy2-tileSize*0.45,tileSize*0.85,tileSize*0.85);
+    }
   }
-  for(let s=0;s<12;s++){
-    const ang=(s+0.5)/12*Math.PI*2+t*0.5, len=r*(0.4+Math.sin(t*3+s)*0.2);
-    ctx.strokeStyle='rgba(255,255,200,0.6)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(ang)*len,Math.sin(ang)*len); ctx.stroke();
+  ctx.restore();
+  // Light rays bouncing off
+  for(let ray=0;ray<6;ray++){
+    const ang=ray/6*Math.PI*2+t*2;
+    const len=r*(1.2+Math.sin(t*4+ray)*0.4);
+    ctx.strokeStyle=tileCols[ray%tileCols.length]; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(Math.cos(ang)*r,Math.sin(ang)*r); ctx.lineTo(Math.cos(ang)*len,Math.sin(ang)*len); ctx.stroke();
   }
+  // Cap hook at top
+  ctx.beginPath(); ctx.ellipse(0,-r*0.88,r*0.2,r*0.1,0,0,Math.PI*2); ctx.fillStyle='#c8c8a0'; ctx.fill();
+  ctx.beginPath(); ctx.arc(0,-r*0.88-r*0.18,r*0.16,Math.PI,Math.PI*2);
+  ctx.strokeStyle='#a0a080'; ctx.lineWidth=1.8; ctx.stroke();
   ctx.restore();
 }
 
