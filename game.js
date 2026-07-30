@@ -2579,18 +2579,18 @@ function saveCurrentProfileData() {
   if (idx < 0 || idx >= profiles.length) return;
   profiles[idx] = {
     ...profiles[idx],
-    coins:           loadCoins(),
-    equippedRocket:  loadEquipped(),
-    unlockedRockets: loadUnlocked(),
-    equippedTail:    loadEquippedTail(),
-    unlockedTails:   loadUnlockedTails(),
-    equippedBg:      loadEquippedBg(),
-    unlockedBgs:     loadUnlockedBgs(),
-    equippedPack:    loadEquippedPack(),
-    unlockedPacks:   loadUnlockedPacks(),
-    equippedMeteor:  loadEquippedMeteor(),
-    unlockedMeteors: loadUnlockedMeteors(),
-    leaderboard:     loadLeaderboard(),
+    coins:           state.coins,
+    equippedRocket:  state.equippedRocket,
+    unlockedRockets: state.unlockedRockets,
+    equippedTail:    state.equippedTail,
+    unlockedTails:   state.unlockedTails,
+    equippedBg:      state.equippedBg,
+    unlockedBgs:     state.unlockedBgs,
+    equippedPack:    state.equippedPack,
+    unlockedPacks:   state.unlockedPacks,
+    equippedMeteor:  state.equippedMeteor,
+    unlockedMeteors: state.unlockedMeteors,
+    leaderboard:     state.leaderboard,
     lastSpinDate:    state.lastSpinDate || '',
   };
   saveProfiles(profiles);
@@ -7737,13 +7737,21 @@ function drawProfileScreen() {
       drawRocket(0, 0, ROCKETS.find(r => r.id === p.equippedRocket) || ROCKETS[0]);
       ctx.restore();
 
-      // Checkmark badge (selected)
+      // Checkmark badge (selected) or delete button (top-right)
+      const delBtnX = CARD_X + CARD_W - 22, delBtnY = cardY + 22;
       if (isSel) {
-        ctx.beginPath(); ctx.arc(CARD_X + CARD_W - 22, cardY + 22, 14, 0, Math.PI * 2);
+        ctx.beginPath(); ctx.arc(delBtnX, delBtnY, 14, 0, Math.PI * 2);
         ctx.fillStyle = '#ff6b35'; ctx.fill();
         ctx.fillStyle = '#fff'; ctx.font = 'bold 13px monospace';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('✓', CARD_X + CARD_W - 22, cardY + 22);
+        ctx.fillText('✓', delBtnX, delBtnY);
+      } else {
+        ctx.beginPath(); ctx.arc(delBtnX, delBtnY, 14, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(160,40,40,0.75)'; ctx.fill();
+        ctx.fillStyle = '#ffaaaa'; ctx.font = 'bold 14px monospace';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('✕', delBtnX, delBtnY);
+        profileButtons.push({ action: 'delete', idx: i, x: delBtnX, y: delBtnY, w: 32, h: 32 });
       }
 
       const tx = CARD_X + 118;
@@ -7912,9 +7920,9 @@ function drawStartScreenDesktop() {
 
   // Profile name
   const profileName = (() => {
-    const profiles = loadProfiles();
-    const idx = getActiveProfileIdx();
-    return profiles[idx]?.name || (state.authUser?.isGuest ? 'GUEST' : (state.authUsername || ''));
+    if (state.authUser && !state.authUser.isGuest) return state.authUser.username;
+    if (state.authUser?.isGuest) return 'GUEST';
+    return state.authUsername || '';
   })();
   if (profileName) {
     ctx.fillStyle = '#aaaacc';
