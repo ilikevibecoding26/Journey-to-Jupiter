@@ -3165,7 +3165,7 @@ function handleTap(x, y) {
       const allTails   = TAILS.map(t => t.id);
       const allMeteors = METEORS.map(m => m.id);
       const allBgs     = BACKGROUNDS.filter(b => !b.wheelOnly).map(b => b.id);
-      const allPacks   = PACKS.map(p => p.id);
+      const allPacks   = PACKS.filter(p => !p.season || isInSeason(p)).map(p => p.id);
       state.unlockedRockets = allRockets; saveUnlocked(allRockets);
       state.unlockedTails   = allTails;   saveUnlockedTails(allTails);
       state.unlockedMeteors = allMeteors; saveUnlockedMeteors(allMeteors);
