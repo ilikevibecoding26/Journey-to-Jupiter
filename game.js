@@ -5722,29 +5722,45 @@ function drawPackBgNewYear(){
     ctx.fillStyle=`rgba(255,255,220,${a})`; ctx.beginPath(); ctx.arc(sx,sy,1+(i%3)*0.4,0,Math.PI*2); ctx.fill();
   }
   const t=gameTime;
-  // Countdown ball drop — glowing orb descending from top
-  const ballY = CANVAS_H * 0.08 + ((t * 0.05) % 1) * CANVAS_H * 0.55;
+  // Disco ball — fixed at top center, slowly spinning
   const ballX = CANVAS_W * 0.5;
+  const ballY = CANVAS_H * 0.08;
   const ballR = 22;
-  // Pole
+  // Pole/string
   ctx.strokeStyle='rgba(180,160,120,0.5)'; ctx.lineWidth=2;
   ctx.beginPath(); ctx.moveTo(ballX,0); ctx.lineTo(ballX,ballY-ballR); ctx.stroke();
-  // Ball glow
-  const ballGlow=ctx.createRadialGradient(ballX,ballY,4,ballX,ballY,55);
-  ballGlow.addColorStop(0,'rgba(255,215,80,0.5)'); ballGlow.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=ballGlow; ctx.beginPath(); ctx.arc(ballX,ballY,55,0,Math.PI*2); ctx.fill();
-  // Ball body — silver/gold with tile pattern
+  // Disco ball glow (color-cycling)
+  const glowR=ctx.createRadialGradient(ballX,ballY,4,ballX,ballY,60);
+  glowR.addColorStop(0,`rgba(255,255,255,0.35)`); glowR.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=glowR; ctx.beginPath(); ctx.arc(ballX,ballY,60,0,Math.PI*2); ctx.fill();
+  // Disco ball base sphere
   const ballG=ctx.createRadialGradient(ballX-8,ballY-8,2,ballX,ballY,ballR);
-  ballG.addColorStop(0,'#ffffff'); ballG.addColorStop(0.3,'#ffd700'); ballG.addColorStop(0.7,'#c8a000'); ballG.addColorStop(1,'#806000');
+  ballG.addColorStop(0,'#ffffff'); ballG.addColorStop(0.3,'#cccccc'); ballG.addColorStop(0.7,'#888888'); ballG.addColorStop(1,'#333333');
   ctx.fillStyle=ballG; ctx.beginPath(); ctx.arc(ballX,ballY,ballR,0,Math.PI*2); ctx.fill();
-  // Tile lines on ball
-  ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=0.8;
-  for(let ti=-2;ti<=2;ti++){
-    ctx.beginPath(); ctx.arc(ballX,ballY,ballR,0,Math.PI*2); ctx.save();
-    ctx.translate(ballX,ballY); ctx.rotate(ti*Math.PI/5);
-    ctx.beginPath(); ctx.moveTo(-ballR,0); ctx.lineTo(ballR,0); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0,-ballR); ctx.lineTo(0,ballR); ctx.stroke();
-    ctx.restore();
+  // Mirrored tiles clipped to sphere
+  const tileCols=['rgba(255,215,0,0.85)','rgba(255,100,180,0.85)','rgba(100,200,255,0.85)','rgba(180,255,100,0.85)','rgba(255,255,255,0.95)'];
+  ctx.save(); ctx.beginPath(); ctx.arc(ballX,ballY,ballR,0,Math.PI*2); ctx.clip();
+  const tileSize=ballR*0.3;
+  for(let tx=-3;tx<=3;tx++){
+    for(let ty=-3;ty<=3;ty++){
+      const px=ballX+tx*tileSize*2+((ty%2)*tileSize)+(t*8%tileSize*2)-tileSize;
+      const py=ballY+ty*tileSize*1.5;
+      ctx.fillStyle=tileCols[Math.abs(tx*3+ty)%tileCols.length];
+      ctx.fillRect(px-tileSize*0.42,py-tileSize*0.42,tileSize*0.84,tileSize*0.84);
+    }
+  }
+  ctx.restore();
+  // Light rays shooting out from disco ball
+  const rayCount=8;
+  for(let ri=0;ri<rayCount;ri++){
+    const ra=(ri/rayCount)*Math.PI*2+t*0.6;
+    const rc=tileCols[ri%tileCols.length];
+    const x1=ballX+Math.cos(ra)*(ballR+2), y1=ballY+Math.sin(ra)*(ballR+2);
+    const x2=ballX+Math.cos(ra)*(ballR+28), y2=ballY+Math.sin(ra)*(ballR+28);
+    const rayG=ctx.createLinearGradient(x1,y1,x2,y2);
+    rayG.addColorStop(0,rc); rayG.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.strokeStyle=rayG; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
   }
   // Streamers falling
   const streamCols=['255,215,0','220,220,220','255,100,180','100,200,255','180,255,100'];
