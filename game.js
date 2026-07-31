@@ -5781,50 +5781,65 @@ function drawPackTailNewYear(bb,bw,no){
 }
 function drawPackRocketNewYear(x,y){
   ctx.save(); ctx.translate(x,y);
-  const bw=30,bh=52,bb=bh/2,bt=-bh/2;
-  const dotCols=['#ffd700','#ff6eb4','#66ffcc','#ff8833'];
-  // Triangular brim fins (party hat shape, not candy)
+  const bw=22, bh=58, bb=bh/2, bt=-bh/2;
+  const noseH=bh*0.28, bodyTop=bt+noseH;
+
+  // Flat triangular fins at base
   for(const s of[-1,1]){
     ctx.beginPath();
-    ctx.moveTo(s*bw/2, bt+bh*0.55);
-    ctx.lineTo(s*(bw/2+13), bt+bh*0.7);
+    ctx.moveTo(s*bw/2, bb-16);
+    ctx.lineTo(s*(bw/2+10), bb);
     ctx.lineTo(s*bw/2, bb);
     ctx.closePath();
-    ctx.fillStyle = s>0 ? '#ffd700' : '#ff6eb4'; ctx.fill();
+    const fg=ctx.createLinearGradient(0,bb-16,0,bb);
+    fg.addColorStop(0,'#ffe44d'); fg.addColorStop(1,'#b8860b');
+    ctx.fillStyle=fg; ctx.fill();
   }
-  // Hat cone body — purple with polka dots
-  const hatG=ctx.createLinearGradient(-bw/2,bt,bw/2,bt);
-  hatG.addColorStop(0,'#7722cc'); hatG.addColorStop(0.5,'#aa44ff'); hatG.addColorStop(1,'#7722cc');
-  ctx.beginPath(); ctx.moveTo(-bw/2,bt+bh*0.55); ctx.lineTo(-bw*0.15,bt); ctx.lineTo(bw*0.15,bt); ctx.lineTo(bw/2,bt+bh*0.55); ctx.closePath();
-  ctx.fillStyle=hatG; ctx.fill();
-  // Polka dots on hat
-  for(let d=0;d<6;d++){
-    const dx=(d%2===0?-1:1)*(4+d%3*3), dy=bt+bh*(0.1+d*0.07);
-    ctx.fillStyle=dotCols[d%dotCols.length]; ctx.beginPath(); ctx.arc(dx,dy,3,0,Math.PI*2); ctx.fill();
-  }
-  // Brim band
-  ctx.fillStyle='#ffeeaa';
-  ctx.beginPath(); ctx.roundRect(-bw/2,bt+bh*0.52,bw,bh*0.5,[0,0,6,6]); ctx.fill();
-  // Horizontal stripes on brim band
-  for(let s=0;s<2;s++){
-    ctx.fillStyle=s===0?'rgba(255,110,180,0.5)':'rgba(100,210,255,0.4)';
-    ctx.fillRect(-bw/2, bt+bh*0.55+s*10, bw, 6);
-  }
-  // Gold elastic at brim
-  ctx.strokeStyle='#cc9900'; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.moveTo(-bw/2,bt+bh*0.55); ctx.lineTo(bw/2,bt+bh*0.55); ctx.stroke();
-  // Fuzzy pom-pom — dense cluster of tiny dots, not a ring
-  const pomY=bt-9;
-  const pomCols=['#ff6eb4','#ffd700','#66ffcc','#ff8833','#ffffff','#cc88ff'];
-  const pomPts=[[0,0],[3,-2],[-3,-1],[2,3],[-2,3],[4,1],[-4,1],[1,-4],[-1,-4],[3,-4],[-3,3],[0,3],[2,-2],[-2,-1],[1,2]];
-  for(let p=0;p<pomPts.length;p++){
-    ctx.fillStyle=pomCols[p%pomCols.length];
-    ctx.beginPath(); ctx.arc(pomPts[p][0],pomY+pomPts[p][1],2,0,Math.PI*2); ctx.fill();
-  }
+
+  // Gold cylindrical body
+  const bodyG=ctx.createLinearGradient(-bw/2,0,bw/2,0);
+  bodyG.addColorStop(0,'#9a6e00'); bodyG.addColorStop(0.2,'#ffd700'); bodyG.addColorStop(0.5,'#ffe87a'); bodyG.addColorStop(0.8,'#ffd700'); bodyG.addColorStop(1,'#9a6e00');
+  ctx.beginPath(); ctx.roundRect(-bw/2, bodyTop, bw, bb-bodyTop, [0,0,4,4]);
+  ctx.fillStyle=bodyG; ctx.fill();
+
+  // Navy nose cone (bullet shape)
+  const noseG=ctx.createLinearGradient(-bw/2,bt,bw/2,bt);
+  noseG.addColorStop(0,'#0d0d40'); noseG.addColorStop(0.5,'#2a2a8e'); noseG.addColorStop(1,'#0d0d40');
+  ctx.beginPath();
+  ctx.moveTo(-bw/2, bodyTop);
+  ctx.bezierCurveTo(-bw/2,bodyTop-noseH*0.3, -bw*0.1,bt, 0,bt);
+  ctx.bezierCurveTo(bw*0.1,bt, bw/2,bodyTop-noseH*0.3, bw/2,bodyTop);
+  ctx.closePath(); ctx.fillStyle=noseG; ctx.fill();
+
+  // Dark porthole window
+  const phY=bodyTop+bh*0.16;
+  ctx.beginPath(); ctx.arc(0,phY,bw*0.32,0,Math.PI*2);
+  ctx.fillStyle='#0a0a30'; ctx.fill();
+  ctx.strokeStyle='#ffd700'; ctx.lineWidth=1.5; ctx.stroke();
+  // Stars inside porthole
+  ctx.fillStyle='#ffd700'; ctx.font='bold 6px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('★',-2.5,phY-1.5);
+  ctx.fillStyle='rgba(255,255,200,0.6)'; ctx.beginPath(); ctx.arc(3,phY+2,1,0,Math.PI*2); ctx.fill();
+
+  // Navy mid-band stripe
+  const bandY=bodyTop+bh*0.42;
+  ctx.fillStyle='#1a1a5e'; ctx.fillRect(-bw/2,bandY,bw,7);
+  ctx.fillStyle='#ffd700'; ctx.font='bold 7px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('★',0,bandY+3.5);
+
+  // Confetti decorations on body
+  ctx.fillStyle='rgba(255,250,200,0.8)'; ctx.font='8px monospace';
+  ctx.fillText('✦',6,bodyTop+bh*0.1);
+
   // Nozzle
-  ctx.beginPath(); ctx.moveTo(-bw*0.42,bb); ctx.lineTo(bw*0.42,bb); ctx.lineTo(bw*0.52,bb+10); ctx.lineTo(-bw*0.52,bb+10); ctx.closePath();
-  ctx.fillStyle='#3a1a66'; ctx.fill();
-  drawPackTailNewYear(bb,bw,10);
+  ctx.beginPath(); ctx.moveTo(-bw*0.32,bb); ctx.lineTo(bw*0.32,bb); ctx.lineTo(bw*0.38,bb+7); ctx.lineTo(-bw*0.38,bb+7); ctx.closePath();
+  ctx.fillStyle='#7a5200'; ctx.fill();
+
+  // Gold sparkle tip
+  ctx.fillStyle='#ffd700'; ctx.font='bold 9px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('✦',0,bt-5);
+
+  drawPackTailNewYear(bb,bw,7);
   ctx.restore();
 }
 function drawPackMeteorNewYear(m){
