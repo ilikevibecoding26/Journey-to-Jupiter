@@ -5860,36 +5860,37 @@ function drawPackRocketNewYear(x,y){
 }
 function drawPackMeteorNewYear(m){
   ctx.save(); ctx.translate(m.x,m.y); ctx.rotate(m.rotation);
-  const r=m.rx,t=gameTime;
-  // Disco ball — silver sphere with reflective tiles
-  const ballG=ctx.createRadialGradient(-r*0.3,-r*0.3,1,0,0,r);
-  ballG.addColorStop(0,'#ffffff'); ballG.addColorStop(0.3,'#dddddd'); ballG.addColorStop(0.7,'#888888'); ballG.addColorStop(1,'#333333');
-  ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fillStyle=ballG; ctx.fill();
-  // Tile grid
-  const tileSize=r*0.28;
-  const tileCols=['rgba(255,215,0,0.8)','rgba(255,100,180,0.8)','rgba(100,200,255,0.8)','rgba(180,255,100,0.8)','rgba(255,255,255,0.9)'];
-  ctx.save(); ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.clip();
-  for(let tx=-3;tx<=3;tx++){
-    for(let ty=-3;ty<=3;ty++){
-      const cx2=tx*tileSize*1.05, cy2=ty*tileSize*1.05;
-      if(cx2*cx2+cy2*cy2>r*r*0.9) continue;
-      const shine=Math.sin(t*3+tx*0.8+ty*1.1)>0.3;
-      ctx.fillStyle=shine?tileCols[(tx+ty+4)%tileCols.length]:'rgba(100,100,120,0.6)';
-      ctx.fillRect(cx2-tileSize*0.45,cy2-tileSize*0.45,tileSize*0.85,tileSize*0.85);
-    }
+  const r=m.rx;
+  // Clock face
+  const faceG=ctx.createRadialGradient(-r*0.2,-r*0.2,1,0,0,r);
+  faceG.addColorStop(0,'#1a1a4e'); faceG.addColorStop(1,'#05051a');
+  ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fillStyle=faceG; ctx.fill();
+  // Gold rim
+  ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2);
+  ctx.strokeStyle='#ffd700'; ctx.lineWidth=r*0.12; ctx.stroke();
+  // Hour tick marks
+  for(let h=0;h<12;h++){
+    const a=h/12*Math.PI*2-Math.PI/2;
+    const isMajor=(h%3===0);
+    const inner=r*(isMajor?0.65:0.75), outer=r*0.88;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a)*inner,Math.sin(a)*inner);
+    ctx.lineTo(Math.cos(a)*outer,Math.sin(a)*outer);
+    ctx.strokeStyle='#ffd700'; ctx.lineWidth=isMajor?r*0.08:r*0.04; ctx.stroke();
   }
-  ctx.restore();
-  // Light rays bouncing off
-  for(let ray=0;ray<6;ray++){
-    const ang=ray/6*Math.PI*2+t*2;
-    const len=r*(1.2+Math.sin(t*4+ray)*0.4);
-    ctx.strokeStyle=tileCols[ray%tileCols.length]; ctx.lineWidth=1.2;
-    ctx.beginPath(); ctx.moveTo(Math.cos(ang)*r,Math.sin(ang)*r); ctx.lineTo(Math.cos(ang)*len,Math.sin(ang)*len); ctx.stroke();
-  }
-  // Cap hook at top
-  ctx.beginPath(); ctx.ellipse(0,-r*0.88,r*0.2,r*0.1,0,0,Math.PI*2); ctx.fillStyle='#c8c8a0'; ctx.fill();
-  ctx.beginPath(); ctx.arc(0,-r*0.88-r*0.18,r*0.16,Math.PI,Math.PI*2);
-  ctx.strokeStyle='#a0a080'; ctx.lineWidth=1.8; ctx.stroke();
+  // Hour hand pointing straight up (midnight)
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-r*0.55);
+  ctx.strokeStyle='#ffffff'; ctx.lineWidth=r*0.1; ctx.lineCap='round'; ctx.stroke();
+  // Minute hand pointing straight up (midnight)
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-r*0.78);
+  ctx.strokeStyle='#ffffff'; ctx.lineWidth=r*0.06; ctx.lineCap='round'; ctx.stroke();
+  // Center dot
+  ctx.beginPath(); ctx.arc(0,0,r*0.1,0,Math.PI*2);
+  ctx.fillStyle='#ffd700'; ctx.fill();
+  // Subtle gold glow ring
+  const glowG=ctx.createRadialGradient(0,0,r,0,0,r*1.5);
+  glowG.addColorStop(0,'rgba(255,215,0,0.25)'); glowG.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.beginPath(); ctx.arc(0,0,r*1.5,0,Math.PI*2); ctx.fillStyle=glowG; ctx.fill();
   ctx.restore();
 }
 
