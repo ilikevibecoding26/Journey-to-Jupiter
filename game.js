@@ -5782,41 +5782,45 @@ function drawPackTailNewYear(bb,bw,no){
 function drawPackRocketNewYear(x,y){
   ctx.save(); ctx.translate(x,y);
   const bw=30,bh=52,bb=bh/2,bt=-bh/2;
-  // Curly ribbon streamers as fins
+  const dotCols=['#ffd700','#ff6eb4','#66ffcc','#ff8833'];
+  // Triangular brim fins (party hat shape, not candy)
   for(const s of[-1,1]){
-    ctx.save(); ctx.translate(s*(bw/2+4),bb-4);
-    for(let curl=0;curl<3;curl++){
-      const cy=curl*8;
-      ctx.strokeStyle=['#ff6eb4','#ffd700','#66ccff'][curl]; ctx.lineWidth=2.5;
-      ctx.beginPath(); ctx.arc(s*5,cy,5,Math.PI*0.5,Math.PI*2.5); ctx.stroke();
-    }
-    ctx.restore();
+    ctx.beginPath();
+    ctx.moveTo(s*bw/2, bt+bh*0.55);
+    ctx.lineTo(s*(bw/2+13), bt+bh*0.7);
+    ctx.lineTo(s*bw/2, bb);
+    ctx.closePath();
+    ctx.fillStyle = s>0 ? '#ffd700' : '#ff6eb4'; ctx.fill();
   }
-  // Party hat body — colorful cone shape as main body
-  // Base band
-  ctx.fillStyle='#ffeeaa';
-  ctx.beginPath(); ctx.roundRect(-bw/2,bt+bh*0.55,bw,bh*0.45,[0,0,6,6]); ctx.fill();
-  // Hat cone (body tapers toward top) — purple with colored polka dots
+  // Hat cone body — purple with polka dots
   const hatG=ctx.createLinearGradient(-bw/2,bt,bw/2,bt);
   hatG.addColorStop(0,'#7722cc'); hatG.addColorStop(0.5,'#aa44ff'); hatG.addColorStop(1,'#7722cc');
   ctx.beginPath(); ctx.moveTo(-bw/2,bt+bh*0.55); ctx.lineTo(-bw*0.15,bt); ctx.lineTo(bw*0.15,bt); ctx.lineTo(bw/2,bt+bh*0.55); ctx.closePath();
   ctx.fillStyle=hatG; ctx.fill();
   // Polka dots on hat
-  const dotCols=['#ffd700','#ff6eb4','#66ffcc','#ff8833'];
   for(let d=0;d<6;d++){
     const dx=(d%2===0?-1:1)*(4+d%3*3), dy=bt+bh*(0.1+d*0.07);
     ctx.fillStyle=dotCols[d%dotCols.length]; ctx.beginPath(); ctx.arc(dx,dy,3,0,Math.PI*2); ctx.fill();
   }
-  // Gold elastic band
-  ctx.strokeStyle='#ffd700'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(-bw/2,bt+bh*0.55); ctx.lineTo(bw/2,bt+bh*0.55); ctx.stroke();
-  // Pom-pom at tip
-  const pomY=bt-10;
-  for(let p=0;p<7;p++){
-    const pa=p/7*Math.PI*2, pr=6;
-    ctx.fillStyle=dotCols[p%dotCols.length]; ctx.beginPath(); ctx.arc(Math.cos(pa)*pr*0.6,pomY+Math.sin(pa)*pr*0.6,4,0,Math.PI*2); ctx.fill();
+  // Brim band
+  ctx.fillStyle='#ffeeaa';
+  ctx.beginPath(); ctx.roundRect(-bw/2,bt+bh*0.52,bw,bh*0.5,[0,0,6,6]); ctx.fill();
+  // Horizontal stripes on brim band
+  for(let s=0;s<2;s++){
+    ctx.fillStyle=s===0?'rgba(255,110,180,0.5)':'rgba(100,210,255,0.4)';
+    ctx.fillRect(-bw/2, bt+bh*0.55+s*10, bw, 6);
   }
-  ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(0,pomY,3,0,Math.PI*2); ctx.fill();
+  // Gold elastic at brim
+  ctx.strokeStyle='#cc9900'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(-bw/2,bt+bh*0.55); ctx.lineTo(bw/2,bt+bh*0.55); ctx.stroke();
+  // Fuzzy pom-pom — dense cluster of tiny dots, not a ring
+  const pomY=bt-9;
+  const pomCols=['#ff6eb4','#ffd700','#66ffcc','#ff8833','#ffffff','#cc88ff'];
+  const pomPts=[[0,0],[3,-2],[-3,-1],[2,3],[-2,3],[4,1],[-4,1],[1,-4],[-1,-4],[3,-4],[-3,3],[0,3],[2,-2],[-2,-1],[1,2]];
+  for(let p=0;p<pomPts.length;p++){
+    ctx.fillStyle=pomCols[p%pomCols.length];
+    ctx.beginPath(); ctx.arc(pomPts[p][0],pomY+pomPts[p][1],2,0,Math.PI*2); ctx.fill();
+  }
   // Nozzle
   ctx.beginPath(); ctx.moveTo(-bw*0.42,bb); ctx.lineTo(bw*0.42,bb); ctx.lineTo(bw*0.52,bb+10); ctx.lineTo(-bw*0.52,bb+10); ctx.closePath();
   ctx.fillStyle='#3a1a66'; ctx.fill();
