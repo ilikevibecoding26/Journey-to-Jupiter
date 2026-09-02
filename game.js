@@ -5974,6 +5974,7 @@ function drawPackBgMouse(){
   }
 }
 function drawPackTailMouse(bb,bw,no){
+  if(typeof bb!=='number') return;  // shop passes Float32Array; skip gracefully
   const ny=bb+no, t=gameTime;
   const fo=62, fw=bw*0.9;
   // Outer dark magenta wings
@@ -6031,7 +6032,7 @@ function drawPackRocketMouse(x,y){
   // Pink body — cylindrical with side gradient
   const bodyG=ctx.createLinearGradient(-bw/2,0,bw/2,0);
   bodyG.addColorStop(0,'#aa2277'); bodyG.addColorStop(0.25,'#ee55aa'); bodyG.addColorStop(0.5,'#ff99cc'); bodyG.addColorStop(0.75,'#ee55aa'); bodyG.addColorStop(1,'#aa2277');
-  ctx.beginPath(); ctx.roundRect(-bw/2,bodyTop,bw,bb-bodyTop,[0,0,5,5]); ctx.fillStyle=bodyG; ctx.fill();
+  ctx.beginPath(); ctx.roundRect(-bw/2,bodyTop,bw,bb-bodyTop,5); ctx.fillStyle=bodyG; ctx.fill();
 
   // Diagonal candy stripe bands — like the design
   ctx.save(); ctx.beginPath(); ctx.rect(-bw/2,bodyTop,bw,bb-bodyTop); ctx.clip();
@@ -6992,22 +6993,24 @@ function drawShopScreen() {
         ctx.save();
         ctx.translate(cardX+6, cardY+6);
         ctx.scale((PCARD_W*0.38)/CANVAS_W, (PCARD_H-12)/CANVAS_H);
-        // Background
-        pk.drawBg();
-        // Three animated meteors scrolling down (offsets spread across card)
-        const t = gameTime;
-        const previewMs = [
-          { x:  70, y: (t*110 +   0) % (CANVAS_H+50) - 25, rx:14, ry:14, rotation: 0.5,  type:'normal'  },
-          { x: 300, y: (t* 80 + 320) % (CANVAS_H+50) - 25, rx:20, ry:20, rotation:-0.25, type:'giant'   },
-          { x: 175, y: (t*155 + 640) % (CANVAS_H+50) - 25, rx: 9, ry: 9, rotation: 0.9,  type:'speeder' },
-        ];
-        for (const m of previewMs) pk.drawMeteor(m);
-        // Rocket + trail — positioned center-right of the preview
-        const rX = CANVAS_W * 0.54, rY = CANVAS_H * 0.66;
-        const N = 28; const tb = new Float32Array(N * 2);
-        for (let j=0; j<N; j++) { tb[j*2]=rX; tb[j*2+1]=rY+16+(j/N)*100; }
-        pk.drawTail(tb, 22, 8);
-        pk.drawRocket(rX, rY);
+        try {
+          // Background
+          pk.drawBg();
+          // Three animated meteors scrolling down (offsets spread across card)
+          const t = gameTime;
+          const previewMs = [
+            { x:  70, y: (t*110 +   0) % (CANVAS_H+50) - 25, rx:14, ry:14, rotation: 0.5,  type:'normal'  },
+            { x: 300, y: (t* 80 + 320) % (CANVAS_H+50) - 25, rx:20, ry:20, rotation:-0.25, type:'giant'   },
+            { x: 175, y: (t*155 + 640) % (CANVAS_H+50) - 25, rx: 9, ry: 9, rotation: 0.9,  type:'speeder' },
+          ];
+          for (const m of previewMs) pk.drawMeteor(m);
+          // Rocket + trail — positioned center-right of the preview
+          const rX = CANVAS_W * 0.54, rY = CANVAS_H * 0.66;
+          const N = 28; const tb = new Float32Array(N * 2);
+          for (let j=0; j<N; j++) { tb[j*2]=rX; tb[j*2+1]=rY+16+(j/N)*100; }
+          pk.drawTail(tb, 22, 8);
+          pk.drawRocket(rX, rY);
+        } catch(e) { /* draw error — skip this pack's preview silently */ }
         ctx.restore();
       }
       ctx.restore();
