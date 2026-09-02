@@ -5918,36 +5918,54 @@ function drawPackMeteorNewYear(m){
 
 // ── MOUSE BIRTHDAY pack (hidden — unlock by tapping ☀️ 5×) ───────────────────
 function drawPackBgMouse(){
+  // Hot pink sky gradient
   const sky=ctx.createLinearGradient(0,0,0,CANVAS_H);
-  sky.addColorStop(0,'#0d0020'); sky.addColorStop(0.5,'#18003a'); sky.addColorStop(1,'#2a005a');
+  sky.addColorStop(0,'#1a0030'); sky.addColorStop(0.4,'#4a0055'); sky.addColorStop(0.75,'#7a1060'); sky.addColorStop(1,'#aa1055');
   ctx.fillStyle=sky; ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
   const t=gameTime;
-  // Large floating oval aura blobs
-  const blobs=[{cx:0.18,cy:0.22,rx:175,ry:90,ph:0},{cx:0.80,cy:0.27,rx:155,ry:82,ph:1.7},{cx:0.50,cy:0.72,rx:200,ry:88,ph:0.9}];
+  // Large floating balloon-oval blobs — hot pink/magenta
+  const blobs=[
+    {cx:0.18,cy:0.22,rx:175,ry:90,ph:0},
+    {cx:0.80,cy:0.27,rx:155,ry:82,ph:1.7},
+    {cx:0.50,cy:0.72,rx:200,ry:88,ph:0.9},
+  ];
   for(const b of blobs){
     const bx=b.cx*CANVAS_W, by=(b.cy+Math.sin(t*0.35+b.ph)*0.018)*CANVAS_H;
-    const og=ctx.createRadialGradient(bx,by,20,bx,by,b.rx);
-    og.addColorStop(0,'rgba(140,50,180,0.22)'); og.addColorStop(0.6,'rgba(100,20,140,0.1)'); og.addColorStop(1,'rgba(60,0,100,0)');
+    // Pink blob glow
+    const og=ctx.createRadialGradient(bx,by,10,bx,by,b.rx);
+    og.addColorStop(0,'rgba(255,80,160,0.32)'); og.addColorStop(0.5,'rgba(200,30,120,0.18)'); og.addColorStop(1,'rgba(150,0,100,0)');
     ctx.beginPath(); ctx.ellipse(bx,by,b.rx,b.ry,0,0,Math.PI*2); ctx.fillStyle=og; ctx.fill();
+    // Brighter inner center
+    const inner=ctx.createRadialGradient(bx,by,5,bx,by,b.rx*0.5);
+    inner.addColorStop(0,'rgba(255,150,210,0.18)'); inner.addColorStop(1,'rgba(255,80,160,0)');
+    ctx.beginPath(); ctx.ellipse(bx,by,b.rx*0.6,b.ry*0.6,0,0,Math.PI*2); ctx.fillStyle=inner; ctx.fill();
+    // Curvy string hanging down
     ctx.beginPath(); ctx.moveTo(bx,by+b.ry);
-    ctx.bezierCurveTo(bx+7,by+b.ry+22,bx-4,by+b.ry+45,bx+3,by+b.ry+72);
-    ctx.strokeStyle='rgba(200,140,220,0.25)'; ctx.lineWidth=1; ctx.stroke();
+    ctx.bezierCurveTo(bx+9,by+b.ry+24,bx-5,by+b.ry+48,bx+4,by+b.ry+80);
+    ctx.strokeStyle='rgba(255,160,210,0.4)'; ctx.lineWidth=1.5; ctx.stroke();
+    // Small dot where string attaches
+    ctx.beginPath(); ctx.arc(bx,by+b.ry,3,0,Math.PI*2); ctx.fillStyle='rgba(255,180,220,0.5)'; ctx.fill();
   }
-  // Floating pink hearts
+  // Floating pink hearts — bright and plentiful
+  const heartSizes=[18,12,22,14,10,20,16,11,24,13,9,17];
   for(let i=0;i<12;i++){
-    const hx=((i*173.7+t*18*(0.4+(i%3)*0.2))%CANVAS_W);
-    const hy=((i*97.3*0.7+t*14*(0.3+(i%4)*0.15))%CANVAS_H);
-    const hs=0.28+(i%3)*0.12, ha=0.22+0.28*Math.sin(t*0.9+i*1.1);
-    ctx.save(); ctx.translate(hx,hy); ctx.scale(hs,hs);
-    ctx.fillStyle=`rgba(255,120,180,${ha})`;
-    ctx.beginPath(); ctx.moveTo(0,5); ctx.bezierCurveTo(-7,-2,-14,2,0,12); ctx.bezierCurveTo(14,2,7,-2,0,5); ctx.fill();
+    const hx=((i*173.7+t*22*(0.4+(i%3)*0.25))%CANVAS_W);
+    const hy=((i*97.3*0.7+t*16*(0.28+(i%4)*0.18))%CANVAS_H);
+    const hs=heartSizes[i], ha=0.45+0.35*Math.sin(t*0.9+i*1.1);
+    ctx.save(); ctx.translate(hx,hy); ctx.scale(hs/40,hs/40);
+    ctx.fillStyle=`rgba(255,90,160,${ha})`;
+    ctx.beginPath(); ctx.moveTo(0,6); ctx.bezierCurveTo(-8,-3,-18,3,0,16); ctx.bezierCurveTo(18,3,8,-3,0,6); ctx.fill();
+    // Lighter highlight on heart
+    ctx.fillStyle=`rgba(255,200,230,${ha*0.5})`;
+    ctx.beginPath(); ctx.arc(-5,-1,3,0,Math.PI*2); ctx.fill();
     ctx.restore();
   }
-  // Twinkling stars
-  for(let i=0;i<65;i++){
-    const sx=(i*179.1)%CANVAS_W, sy=(i*103.7)%(CANVAS_H*0.82);
-    const a=0.2+0.5*Math.sin(t*1.5+i*0.8);
-    ctx.fillStyle=`rgba(255,200,240,${a})`; ctx.beginPath(); ctx.arc(sx,sy,0.6+(i%3)*0.35,0,Math.PI*2); ctx.fill();
+  // Pink + white twinkling stars
+  for(let i=0;i<70;i++){
+    const sx=(i*179.1)%CANVAS_W, sy=(i*103.7)%(CANVAS_H*0.85);
+    const a=0.3+0.6*Math.sin(t*1.5+i*0.8);
+    const col=i%3===0?`rgba(255,255,255,${a})`:`rgba(255,180,220,${a})`;
+    ctx.fillStyle=col; ctx.beginPath(); ctx.arc(sx,sy,0.7+(i%3)*0.5,0,Math.PI*2); ctx.fill();
   }
 }
 function drawPackTailMouse(bb,bw,no){
