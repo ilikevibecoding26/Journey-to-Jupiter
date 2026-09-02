@@ -5970,19 +5970,46 @@ function drawPackBgMouse(){
 }
 function drawPackTailMouse(bb,bw,no){
   const ny=bb+no, t=gameTime;
-  for(let i=0;i<2;i++){
-    const s=i===0?-1:1;
-    const spread=bw*2.3+Math.sin(t*3.5+i)*2.5;
-    const g=ctx.createLinearGradient(0,ny,s*spread,ny+58);
-    g.addColorStop(0,'rgba(255,140,215,0.95)'); g.addColorStop(0.35,'rgba(220,70,175,0.5)'); g.addColorStop(1,'rgba(170,10,130,0)');
-    ctx.beginPath(); ctx.moveTo(s*bw*0.12,ny); ctx.lineTo(s*bw*0.38,ny+10);
-    ctx.lineTo(s*spread+s*9,ny+58); ctx.lineTo(s*spread-s*9,ny+58);
-    ctx.closePath(); ctx.fillStyle=g; ctx.fill();
+  const fo=62, fw=bw*0.9;
+  // Outer dark magenta wings
+  const og=ctx.createLinearGradient(0,ny,0,ny+fo);
+  og.addColorStop(0,'rgba(160,20,100,0.95)'); og.addColorStop(0.5,'rgba(130,10,80,0.7)'); og.addColorStop(1,'rgba(80,0,50,0)');
+  ctx.beginPath();
+  ctx.moveTo(-fw,ny);
+  ctx.quadraticCurveTo(-fw*1.45,ny+fo*0.55, -fw*0.5,ny+fo);
+  ctx.lineTo(fw*0.5,ny+fo);
+  ctx.quadraticCurveTo(fw*1.45,ny+fo*0.55, fw,ny);
+  ctx.closePath(); ctx.fillStyle=og; ctx.fill();
+  // Mid pink layer
+  const mg=ctx.createLinearGradient(0,ny,0,ny+fo*0.85);
+  mg.addColorStop(0,'rgba(230,70,160,0.9)'); mg.addColorStop(0.5,'rgba(200,50,140,0.65)'); mg.addColorStop(1,'rgba(160,20,110,0)');
+  ctx.beginPath();
+  ctx.moveTo(-fw*0.72,ny);
+  ctx.quadraticCurveTo(-fw*1.05,ny+fo*0.5, -fw*0.3,ny+fo*0.82);
+  ctx.lineTo(fw*0.3,ny+fo*0.82);
+  ctx.quadraticCurveTo(fw*1.05,ny+fo*0.5, fw*0.72,ny);
+  ctx.closePath(); ctx.fillStyle=mg; ctx.fill();
+  // Inner hot pink
+  const ig=ctx.createLinearGradient(0,ny,0,ny+fo*0.7);
+  ig.addColorStop(0,'rgba(255,120,200,0.95)'); ig.addColorStop(0.6,'rgba(240,80,170,0.6)'); ig.addColorStop(1,'rgba(200,40,140,0)');
+  ctx.beginPath();
+  ctx.moveTo(-fw*0.42,ny);
+  ctx.quadraticCurveTo(-fw*0.58,ny+fo*0.42, -fw*0.12,ny+fo*0.65);
+  ctx.lineTo(fw*0.12,ny+fo*0.65);
+  ctx.quadraticCurveTo(fw*0.58,ny+fo*0.42, fw*0.42,ny);
+  ctx.closePath(); ctx.fillStyle=ig; ctx.fill();
+  // Bright white-pink core
+  const cg=ctx.createLinearGradient(0,ny,0,ny+fo*0.5);
+  cg.addColorStop(0,'rgba(255,240,255,1)'); cg.addColorStop(0.5,'rgba(255,180,230,0.8)'); cg.addColorStop(1,'rgba(255,120,200,0)');
+  ctx.beginPath();
+  ctx.moveTo(-bw*0.18,ny); ctx.lineTo(bw*0.18,ny); ctx.lineTo(0,ny+fo*0.48);
+  ctx.closePath(); ctx.fillStyle=cg; ctx.fill();
+  // Floating bubble dots
+  for(let i=0;i<4;i++){
+    const bx=(i%2===0?-1:1)*fw*(0.55+i*0.08), by2=ny+fo*(0.18+i*0.15);
+    const ba=0.35+0.2*Math.sin(t*2+i*1.4);
+    ctx.beginPath(); ctx.arc(bx,by2,2.5,0,Math.PI*2); ctx.fillStyle=`rgba(255,200,235,${ba})`; ctx.fill();
   }
-  const core=ctx.createLinearGradient(0,ny,0,ny+32);
-  core.addColorStop(0,'rgba(255,235,255,1)'); core.addColorStop(0.5,'rgba(255,140,215,0.6)'); core.addColorStop(1,'rgba(255,100,200,0)');
-  ctx.beginPath(); ctx.moveTo(-bw*0.16,ny); ctx.lineTo(bw*0.16,ny); ctx.lineTo(0,ny+32); ctx.closePath();
-  ctx.fillStyle=core; ctx.fill();
 }
 function drawPackRocketMouse(x,y){
   ctx.save(); ctx.translate(x,y);
@@ -6009,26 +6036,38 @@ function drawPackRocketMouse(x,y){
   ctx.bezierCurveTo(-bw/2,bodyTop-noseH*0.3,-bw*0.1,bt,0,bt);
   ctx.bezierCurveTo(bw*0.1,bt,bw/2,bodyTop-noseH*0.3,bw/2,bodyTop);
   ctx.closePath(); ctx.fillStyle=noseG; ctx.fill();
-  // Mouse ears
+  // Mouse ears — small, high up at nose-body junction so they read as ears not eyes
   for(const s of[-1,1]){
-    const ex=s*(bw/2+1),ey=bodyTop+5;
-    const eg=ctx.createRadialGradient(ex-s*2,ey-2,1,ex,ey,7.5);
-    eg.addColorStop(0,'#ff90cc'); eg.addColorStop(1,'#dd3388');
-    ctx.beginPath(); ctx.arc(ex,ey,7.5,0,Math.PI*2); ctx.fillStyle=eg; ctx.fill();
-    ctx.beginPath(); ctx.arc(ex,ey,3.8,0,Math.PI*2); ctx.fillStyle='rgba(255,170,210,0.65)'; ctx.fill();
+    const ex=s*(bw/2+2), ey=bodyTop-2; // sits right at the nose/body join
+    const eg=ctx.createRadialGradient(ex-s*1,ey-1,1,ex,ey,6);
+    eg.addColorStop(0,'#ff90cc'); eg.addColorStop(1,'#cc2277');
+    ctx.beginPath(); ctx.arc(ex,ey,6,0,Math.PI*2); ctx.fillStyle=eg; ctx.fill();
+    // Inner ear (lighter pink)
+    ctx.beginPath(); ctx.arc(ex,ey,3,0,Math.PI*2); ctx.fillStyle='#ffbbdd'; ctx.fill();
   }
   // Porthole + mouse face
   const phY=bodyTop+bh*0.37;
   ctx.beginPath(); ctx.arc(0,phY,bw*0.36,0,Math.PI*2); ctx.fillStyle='#1a0010'; ctx.fill();
   const faceG=ctx.createRadialGradient(-2,phY-2,1,0,phY,bw*0.27);
-  faceG.addColorStop(0,'#ece4e4'); faceG.addColorStop(1,'#cdbcbc');
+  faceG.addColorStop(0,'#f0e8e8'); faceG.addColorStop(1,'#d0b8b8');
   ctx.beginPath(); ctx.arc(0,phY,bw*0.27,0,Math.PI*2); ctx.fillStyle=faceG; ctx.fill();
+  // Small round mouse eyes (beady, close together)
   for(const s of[-1,1]){
-    ctx.beginPath(); ctx.arc(s*2.8,phY-1,1.5,0,Math.PI*2); ctx.fillStyle='#1a0018'; ctx.fill();
-    ctx.beginPath(); ctx.arc(s*2.8+s*0.5,phY-1.6,0.55,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+    ctx.beginPath(); ctx.arc(s*2.2,phY-2,1.4,0,Math.PI*2); ctx.fillStyle='#110011'; ctx.fill();
+    ctx.beginPath(); ctx.arc(s*2.2+s*0.4,phY-2.5,0.5,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
   }
-  ctx.beginPath(); ctx.arc(0,phY+2.2,1.1,0,Math.PI*2); ctx.fillStyle='#ff5588'; ctx.fill();
-  // Bow
+  // Round mouse snout (the key feature!)
+  ctx.beginPath(); ctx.arc(0,phY+2.5,2.8,0,Math.PI*2); ctx.fillStyle='#e8c8c8'; ctx.fill();
+  ctx.beginPath(); ctx.arc(0,phY+2.5,2.8,0,Math.PI*2); ctx.strokeStyle='rgba(180,100,120,0.4)'; ctx.lineWidth=0.6; ctx.stroke();
+  // Tiny nose on snout
+  ctx.beginPath(); ctx.arc(0,phY+1.8,0.9,0,Math.PI*2); ctx.fillStyle='#ff4477'; ctx.fill();
+  // Whiskers
+  ctx.strokeStyle='rgba(80,40,60,0.55)'; ctx.lineWidth=0.6;
+  for(const s of[-1,1]){
+    ctx.beginPath(); ctx.moveTo(s*1,phY+2.5); ctx.lineTo(s*7,phY+1.5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(s*1,phY+2.8); ctx.lineTo(s*7,phY+3.2); ctx.stroke();
+  }
+  // Bow on top of mouse head
   for(const s of[-1,1]){
     ctx.beginPath(); ctx.moveTo(0,phY-bw*0.2); ctx.lineTo(s*5.5,phY-bw*0.28); ctx.lineTo(s*5.5,phY-bw*0.12); ctx.closePath();
     ctx.fillStyle='#ff3377'; ctx.fill();
