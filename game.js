@@ -2740,6 +2740,10 @@ const state = {
   runStarCount:       0,         // stars collected this run
   runCloseCallCount:  0,         // close calls this run
   clearedZoneNoHit:   false,     // true if player cleared a zone with 0 hits
+  // Game modes
+  gameMode:           'classic', // 'classic' | 'timed' | 'dodge'
+  timedRunLeft:       60,        // seconds remaining (timed mode)
+  dodgeSpeedMult:     1.0,       // meteor speed multiplier (dodge mode)
 };
 
 // ── Daily challenges ──────────────────────────
@@ -3116,6 +3120,13 @@ function handleTap(x, y) {
       }
     }
     return;
+  }
+  if (state.screen === 'start') {
+    for (const mb of modeBtns) {
+      if (Math.abs(x - mb.x) < mb.w/2 && Math.abs(y - mb.y) < mb.h/2) {
+        state.gameMode = mb.mode; return;
+      }
+    }
   }
   if (state.screen === 'start'       && hitButton(LAUNCH_BTN,       x, y)) beginLaunch();
   if (state.screen === 'start'       && hitButton(SETTINGS_BTN,     x, y)) state.screen = 'settings';
@@ -3504,6 +3515,8 @@ const LEADERBOARD_BACK = { x: CANVAS_W / 2, y: 748, w: 250, h: 58 };
 const TUTORIAL_BACK    = { x: CANVAS_W / 2, y: 748, w: 250, h: 58 };
 const SOUND_TOGGLE     = { x: CANVAS_W / 2, y: 380, w: 280, h: 70 };
 let LAUNCH_BTN      = { x: CANVAS_W / 2, y: 748, w: 250, h: 58 };
+// Mode selector chips (built at draw time, stored for hit-testing)
+let modeBtns = [];  // [{ mode, x, y, w, h }, ...]
 const REVIVE_BTN      = { x: CANVAS_W / 2, y: 552, w: 270, h: 62 };
 const TRY_AGAIN_BTN   = { x: CANVAS_W / 2, y: 636, w: 250, h: 58 };
 const MAIN_MENU_BTN   = { x: CANVAS_W / 2, y: 716, w: 250, h: 58 };
@@ -3670,6 +3683,9 @@ function startGame() {
   state.reviveUsed      = false;
   state.reviveCountdown = 0;
   state.gameOverTaps    = 0;
+  // Mode-specific reset (gameMode is NOT reset — it persists from the start screen)
+  state.timedRunLeft   = 60;
+  state.dodgeSpeedMult = 1.0;
   // Ghost run — always start fresh recording; activate playback if ghost mode on
   state.ghostPath         = [];
   state.ghostSampleTimer  = 0;
@@ -3751,7 +3767,7 @@ let giantTimer   = 0;
 
 function spawnMeteor() {
   const size    = METEOR_SIZES[Math.floor(Math.random() * METEOR_SIZES.length)];
-  const speedMult = (1 + (state.level - 1) * 0.18);
+  const speedMult = (1 + (state.level - 1) * 0.18) * (state.gameMode === 'dodge' ? state.dodgeSpeedMult : 1);
   state.meteors.push({
     type:     'normal',
     x:        Math.random() * (CANVAS_W - 40) + 20,
@@ -3982,6 +3998,23 @@ function update(delta) {
 
   state.elapsedTime += delta;   // tick the trip timer
 
+  // ── Mode-specific per-frame logic ──────────────────────────────────────────
+  if (state.gameMode === 'timed') {
+    state.timedRunLeft -= delta;
+    if (state.timedRunLeft <= 0) {
+      state.timedRunLeft = 0;
+      // Time's up — treat like game over (no WIN, just show score)
+      state.screen = 'gameover';
+      updateStatsAfterRun(false);
+      updateDailyChallengeAfterRun();
+      return;
+    }
+  }
+  if (state.gameMode === 'dodge') {
+    // Meteors get faster every 10 seconds, up to 3× speed
+    state.dodgeSpeedMult = Math.min(3.0, 1.0 + Math.floor(state.elapsedTime / 10) * 0.25);
+  }
+
   const rocket = state.rocket;
 
   // Zone speed multiplier: zone 1=1.0, zone 2=1.2, zone 3=1.4, zone 4=1.65
@@ -4020,17 +4053,23 @@ function update(delta) {
     state.timeSinceHit = 0;
   }
 
-  // Spawn meteors on a timer
+  // Spawn meteors on a timer (dodge mode shrinks the interval over time)
+  const effectiveSpawnInterval = state.gameMode === 'dodge'
+    ? Math.max(0.35, METEOR_SPAWN_INTERVAL / state.dodgeSpeedMult)
+    : METEOR_SPAWN_INTERVAL;
   meteorTimer += delta;
-  if (meteorTimer >= METEOR_SPAWN_INTERVAL) {
+  if (meteorTimer >= effectiveSpawnInterval) {
     meteorTimer = 0;
     spawnMeteor();
   }
 
-  // Spawn fast small meteors (zone 2+)
-  if (state.backgroundZone >= 2) {
+  // Spawn fast small meteors (zone 2+ in classic/timed; always in dodge)
+  if (state.backgroundZone >= 2 || state.gameMode === 'dodge') {
     speederTimer += delta;
-    if (speederTimer >= SPEEDER_SPAWN_INTERVAL) {
+    const effectiveSpeederInterval = state.gameMode === 'dodge'
+      ? Math.max(0.5, SPEEDER_SPAWN_INTERVAL / state.dodgeSpeedMult)
+      : SPEEDER_SPAWN_INTERVAL;
+    if (speederTimer >= effectiveSpeederInterval) {
       speederTimer = -(Math.random() * 1.5);
       spawnSpeeder();
     }
@@ -4327,8 +4366,8 @@ function update(delta) {
   }
   if (state.levelAnnounce.life > 0) state.levelAnnounce.life -= delta;
 
-  // Win condition
-  if (state.score >= WIN_SCORE && state.screen === 'playing') {
+  // Win condition (classic only — timed/dodge have no Jupiter finish line)
+  if (state.gameMode === 'classic' && state.score >= WIN_SCORE && state.screen === 'playing') {
     if (timeQualifies(state.elapsedTime)) {
       // New record — ask for their name first
       state.pendingTime = state.elapsedTime;
@@ -4794,23 +4833,41 @@ function drawGameOverScreen() {
   ctx.lineWidth   = 2;
   ctx.stroke();
 
-  // "GAME OVER"
-  ctx.fillStyle    = '#ff3a3a';
+  // Headline changes by mode
   ctx.font         = 'bold 44px monospace';
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('GAME OVER', CANVAS_W / 2, panelY + 55);
+  if (state.gameMode === 'timed') {
+    ctx.fillStyle = '#ff9030';
+    ctx.fillText("TIME'S UP!", CANVAS_W / 2, panelY + 55);
+  } else if (state.gameMode === 'dodge') {
+    ctx.fillStyle = '#ff3a3a';
+    ctx.fillText('DODGED OUT!', CANVAS_W / 2, panelY + 55);
+  } else {
+    ctx.fillStyle = '#ff3a3a';
+    ctx.fillText('GAME OVER', CANVAS_W / 2, panelY + 55);
+  }
 
-  // Survived time
+  // Stats row — changes by mode
   ctx.fillStyle = '#aaaacc';
   ctx.font      = 'bold 13px monospace';
-  ctx.fillText('SCORE', CANVAS_W / 2 - 68, panelY + 100);
-  ctx.fillText('TIME', CANVAS_W / 2 + 68, panelY + 100);
-  ctx.fillStyle = '#ffffff';
-  ctx.font      = 'bold 28px monospace';
-  ctx.fillText(state.score, CANVAS_W / 2 - 68, panelY + 132);
-  ctx.fillStyle = '#ddc0ff';
-  ctx.fillText(formatTime(state.elapsedTime), CANVAS_W / 2 + 68, panelY + 132);
+  if (state.gameMode === 'dodge') {
+    ctx.fillText('SURVIVED', CANVAS_W / 2 - 68, panelY + 100);
+    ctx.fillText('SPEED', CANVAS_W / 2 + 68, panelY + 100);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 28px monospace';
+    ctx.fillText(formatTime(state.elapsedTime), CANVAS_W / 2 - 68, panelY + 132);
+    ctx.fillStyle = '#ff8c00';
+    ctx.fillText(`×${state.dodgeSpeedMult.toFixed(1)}`, CANVAS_W / 2 + 68, panelY + 132);
+  } else {
+    ctx.fillText('SCORE', CANVAS_W / 2 - 68, panelY + 100);
+    ctx.fillText(state.gameMode === 'timed' ? 'SCORED IN' : 'TIME', CANVAS_W / 2 + 68, panelY + 100);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 28px monospace';
+    ctx.fillText(state.score, CANVAS_W / 2 - 68, panelY + 132);
+    ctx.fillStyle = '#ddc0ff';
+    ctx.fillText(formatTime(state.elapsedTime), CANVAS_W / 2 + 68, panelY + 132);
+  }
 
   // Divider
   ctx.strokeStyle = 'rgba(255,255,255,0.12)';
@@ -4819,26 +4876,33 @@ function drawGameOverScreen() {
   ctx.moveTo(55, panelY + 158); ctx.lineTo(CANVAS_W - 55, panelY + 158);
   ctx.stroke();
 
-  // Fastest trips leaderboard header
+  // Leaderboard section — classic only
   ctx.fillStyle = '#7a7aaa';
   ctx.font      = 'bold 12px monospace';
-  ctx.fillText('FASTEST TRIPS TO JUPITER', CANVAS_W / 2, panelY + 180, CANVAS_W - 80);
-
-  // Top 5 rows (times, ascending)
-  const board   = state.leaderboard;
-  const medals  = ['🥇','🥈','🥉','4.','5.'];
-  if (board.length === 0) {
-    ctx.fillStyle = '#555577';
-    ctx.font      = '12px monospace';
-    ctx.fillText('Reach Jupiter to set a record!', CANVAS_W / 2, panelY + 210, CANVAS_W - 80);
+  if (state.gameMode !== 'classic') {
+    const modeLabel = state.gameMode === 'timed' ? '⏱ TIMED MODE' : '☄️ DODGE MODE';
+    ctx.fillText(modeLabel + ' — no Jupiter run, no leaderboard', CANVAS_W / 2, panelY + 180, CANVAS_W - 80);
   } else {
-    for (let i = 0; i < Math.min(board.length, 5); i++) {
-      const rowY = panelY + 206 + i * 34;
-      ctx.fillStyle = i === 0 ? '#ffd700' : '#ccccee';
-      ctx.font      = `bold 14px monospace`;
-      const entry = board[i]; const isMe = entry?.time === state.elapsedTime;
-      ctx.fillStyle = isMe ? '#ffee88' : (i === 0 ? '#ffd700' : '#ccccee');
-      ctx.fillText(`${medals[i]}  ${(entry?.name||'PILOT').padEnd(8)}  ${formatTime(entry?.time||0)}`, CANVAS_W / 2, rowY, CANVAS_W - 80);
+    ctx.fillText('FASTEST TRIPS TO JUPITER', CANVAS_W / 2, panelY + 180, CANVAS_W - 80);
+  }
+
+  // Top 5 rows (times, ascending) — classic only
+  if (state.gameMode === 'classic') {
+    const board   = state.leaderboard;
+    const medals  = ['🥇','🥈','🥉','4.','5.'];
+    if (board.length === 0) {
+      ctx.fillStyle = '#555577';
+      ctx.font      = '12px monospace';
+      ctx.fillText('Reach Jupiter to set a record!', CANVAS_W / 2, panelY + 210, CANVAS_W - 80);
+    } else {
+      for (let i = 0; i < Math.min(board.length, 5); i++) {
+        const rowY = panelY + 206 + i * 34;
+        ctx.fillStyle = i === 0 ? '#ffd700' : '#ccccee';
+        ctx.font      = `bold 14px monospace`;
+        const entry = board[i]; const isMe = entry?.time === state.elapsedTime;
+        ctx.fillStyle = isMe ? '#ffee88' : (i === 0 ? '#ffd700' : '#ccccee');
+        ctx.fillText(`${medals[i]}  ${(entry?.name||'PILOT').padEnd(8)}  ${formatTime(entry?.time||0)}`, CANVAS_W / 2, rowY, CANVAS_W - 80);
+      }
     }
   }
 
@@ -8228,6 +8292,37 @@ function drawStartScreen() {
   ctx.fillText('LAUNCH ROCKET', btn.x, btn.y);
   ctx.textBaseline = 'alphabetic';
 
+  // ── Mode selector chips ───────────────────────
+  {
+    const modes = [
+      { mode:'classic', label:'🚀 CLASSIC' },
+      { mode:'timed',   label:'⏱ TIMED' },
+      { mode:'dodge',   label:'☄️ DODGE' },
+    ];
+    const chipW = 96, chipH = 30, gap = 8;
+    const totalW = modes.length * chipW + (modes.length - 1) * gap;
+    const chipY = btn.y - btn.h / 2 - 18;
+    modeBtns = [];
+    for (let mi = 0; mi < modes.length; mi++) {
+      const { mode, label } = modes[mi];
+      const chipX = CANVAS_W / 2 - totalW / 2 + mi * (chipW + gap);
+      const selected = state.gameMode === mode;
+      modeBtns.push({ mode, x: chipX + chipW/2, y: chipY, w: chipW, h: chipH });
+      // Pill background
+      ctx.beginPath(); ctx.roundRect(chipX, chipY - chipH/2, chipW, chipH, chipH/2);
+      ctx.fillStyle = selected ? '#ff5c18' : 'rgba(0,0,20,0.55)';
+      ctx.fill();
+      ctx.strokeStyle = selected ? '#ffaa50' : 'rgba(255,255,255,0.2)';
+      ctx.lineWidth = selected ? 2 : 1;
+      ctx.stroke();
+      ctx.fillStyle = selected ? '#ffffff' : 'rgba(200,200,220,0.7)';
+      ctx.font = `bold ${selected ? 11 : 10}px monospace`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(label, chipX + chipW/2, chipY);
+    }
+    ctx.textBaseline = 'alphabetic';
+  }
+
   // ── Icon buttons (top-right area) ─────────────
   function drawIconBtn(btn, emoji) {
     ctx.fillStyle = 'rgba(0, 0, 20, 0.55)';
@@ -8928,9 +9023,24 @@ function drawHUD() {
   const hearts = '♥'.repeat(state.lives) + '○'.repeat(3 - state.lives);
   drawHUDPill(CANVAS_W * 0.73, 20, hearts, '#e03355', '#ff7090');
 
-  // Row 2: Level + Timer
+  // Row 2: Level + mode-specific timer
   drawHUDPill(CANVAS_W * 0.27, 50, `LEVEL ${state.level}`, '#5bcab8', '#7ed6c8');
-  drawHUDPill(CANVAS_W * 0.73, 50, `⏱ ${formatTime(state.elapsedTime)}`, '#c8a0ff', '#ddc0ff');
+  if (state.gameMode === 'timed') {
+    // Countdown — goes red when ≤ 10 seconds left
+    const secs = Math.ceil(state.timedRunLeft);
+    const urgent = secs <= 10;
+    const pulse  = urgent ? (0.7 + 0.3 * Math.sin(gameTime * 10)) : 1;
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    drawHUDPill(CANVAS_W * 0.73, 50, `⏱ ${secs}s LEFT`, urgent ? '#ff2244' : '#c8a0ff', urgent ? '#ffaaaa' : '#ddc0ff');
+    ctx.restore();
+  } else if (state.gameMode === 'dodge') {
+    // Survival time + current speed tier
+    const tier = Math.floor((state.dodgeSpeedMult - 1) / 0.25) + 1;
+    drawHUDPill(CANVAS_W * 0.73, 50, `☄️ SPD ×${state.dodgeSpeedMult.toFixed(1)}`, '#ff8c00', '#ffcc44');
+  } else {
+    drawHUDPill(CANVAS_W * 0.73, 50, `⏱ ${formatTime(state.elapsedTime)}`, '#c8a0ff', '#ddc0ff');
+  }
 }
 
 function drawHUDPill(cx, cy, text, borderColor, textColor) {
