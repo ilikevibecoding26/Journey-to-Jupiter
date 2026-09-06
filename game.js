@@ -2090,10 +2090,6 @@ const PACKS=[
   {id:'fourthofjuly', name:'4TH OF JULY',  emoji:'🎆', cost:0, season:{start:{month:7,day:1},end:{month:7,day:31}},
     drawRocket:drawPackRocketFourthOfJuly, drawTail:drawPackTailFourthOfJuly,
     drawBg:drawPackBgFourthOfJuly,         drawMeteor:drawPackMeteorFourthOfJuly},
-  // Hidden birthday pack — unlocked by tapping the sun 5×
-  {id:'mouse', name:'BIRTHDAY', emoji:'🎀', cost:0, hidden:true,
-    drawRocket:drawPackRocketMouse, drawTail:drawPackTailMouse,
-    drawBg:drawPackBgMouse,         drawMeteor:drawPackMeteorMouse},
 ];
 
 function isInSeason(p) {
@@ -2169,7 +2165,6 @@ const BACKGROUNDS=[
   {id:'newyear_bg',     name:"NEW YEAR'S",   cost:0, packId:'newyear',     drawFn:drawPackBgNewYear},
   {id:'stpatricks_bg',  name:"ST. PATRICK'S",cost:0, packId:'stpatricks',  drawFn:drawPackBgStPatricks},
   {id:'fourthofjuly_bg',name:'4TH OF JULY',  cost:0, packId:'fourthofjuly',drawFn:drawPackBgFourthOfJuly},
-  {id:'mouse_bg',       name:'BIRTHDAY',     cost:0, packId:'mouse',       drawFn:drawPackBgMouse},
   // Secret easter-egg backgrounds (cost 0, hidden from shop)
   {id:'retrowave',   name:'RETROWAVE', cost:0, secret:true,       drawFn:drawBgRetrowave    },
   {id:'matrix',      name:'MATRIX',    cost:0, secret:true,       drawFn:drawBgMatrix       },
@@ -2197,7 +2192,6 @@ const METEORS=[
   {id:'newyear_meteor',     name:"NEW YEAR'S",   cost:0, packId:'newyear',     drawFn:drawPackMeteorNewYear},
   {id:'stpatricks_meteor',  name:"ST. PATRICK'S",cost:0, packId:'stpatricks',  drawFn:drawPackMeteorStPatricks},
   {id:'fourthofjuly_meteor',name:'4TH OF JULY',  cost:0, packId:'fourthofjuly',drawFn:drawPackMeteorFourthOfJuly},
-  {id:'mouse_meteor',       name:'BIRTHDAY',     cost:0, packId:'mouse',       drawFn:drawPackMeteorMouse},
 ];
 
 // ── Tail draw functions ─────────────────────────────────────────────────────
@@ -2310,7 +2304,6 @@ const TAILS=[
   {id:'newyear_tail',     name:"NEW YEAR'S TRAIL",  cost:0, packId:'newyear',     drawFn:(bb,bw,no)=>{const pk=PACKS.find(p=>p.id==='newyear');     if(pk)pk.drawTail(bb,bw,no);}},
   {id:'stpatricks_tail',  name:"ST. PATRICK'S TRAIL",cost:0,packId:'stpatricks',  drawFn:(bb,bw,no)=>{const pk=PACKS.find(p=>p.id==='stpatricks');  if(pk)pk.drawTail(bb,bw,no);}},
   {id:'fourthofjuly_tail',name:'4TH OF JULY TRAIL', cost:0, packId:'fourthofjuly',drawFn:(bb,bw,no)=>{const pk=PACKS.find(p=>p.id==='fourthofjuly');if(pk)pk.drawTail(bb,bw,no);}},
-  {id:'mouse_tail',       name:'BIRTHDAY TRAIL',   cost:0, packId:'mouse',       drawFn:(bb,bw,no)=>{const pk=PACKS.find(p=>p.id==='mouse');if(pk)pk.drawTail(bb,bw,no);}},
 ];
 
 // ── Rocket shop config ────────────────────────
@@ -2416,7 +2409,6 @@ const ROCKETS = [
   {id:'newyear_rocket',     name:"NEW YEAR'S SHIP",  cost:0, packId:'newyear',     drawFn:(x,y)=>drawPackRocketNewYear(x,y)},
   {id:'stpatricks_rocket',  name:"ST. PATRICK'S SHIP",cost:0,packId:'stpatricks',  drawFn:(x,y)=>drawPackRocketStPatricks(x,y)},
   {id:'fourthofjuly_rocket',name:'4TH OF JULY SHIP', cost:0, packId:'fourthofjuly',drawFn:(x,y)=>drawPackRocketFourthOfJuly(x,y)},
-  {id:'mouse_rocket',       name:'BIRTHDAY SHIP',   cost:0, packId:'mouse',       drawFn:(x,y)=>drawPackRocketMouse(x,y)},
 ];
 
 function loadUnlocked() {
@@ -3168,19 +3160,6 @@ function handleTap(x, y) {
     const now = Date.now();
     if (now - state.sunLastTap > 2000) state.sunTaps = 0;
     state.sunTaps++; state.sunLastTap = now;
-    if (state.sunTaps === 5) {
-      // 🎀 Birthday pack — secret gift
-      const pid='mouse';
-      if(!state.unlockedPacks.includes(pid)){
-        state.unlockedPacks=[...state.unlockedPacks,pid]; saveUnlockedPacks(state.unlockedPacks);
-        const ur=loadUnlocked();       if(!ur.includes(pid+'_rocket')){ur.push(pid+'_rocket');saveUnlocked(ur);state.unlockedRockets=ur;}
-        const ut=loadUnlockedTails();  if(!ut.includes(pid+'_tail'))  {ut.push(pid+'_tail');  saveUnlockedTails(ut);state.unlockedTails=ut;}
-        const ub=loadUnlockedBgs();    if(!ub.includes(pid+'_bg'))    {ub.push(pid+'_bg');    saveUnlockedBgs(ub);state.unlockedBgs=ub;}
-        const um=loadUnlockedMeteors();if(!um.includes(pid+'_meteor')){um.push(pid+'_meteor');saveUnlockedMeteors(um);state.unlockedMeteors=um;}
-        saveCurrentProfileData();
-        state.secretFlash={life:5,msg:'🎀  BIRTHDAY PACK!',sub:'🐭 Mouse pack unlocked — tap SHOP to use it!'};
-      }
-    }
     if (state.sunTaps >= 9) {
       state.sunTaps = 0;
       const allRockets = ROCKETS.map(r => r.id);
@@ -5916,265 +5895,6 @@ function drawPackMeteorNewYear(m){
   ctx.restore();
 }
 
-// ── MOUSE BIRTHDAY pack (hidden — unlock by tapping ☀️ 5×) ───────────────────
-function drawPackBgMouse(){
-  // Deep purple/indigo sky — warm purple at bottom like the design
-  const sky=ctx.createLinearGradient(0,0,0,CANVAS_H);
-  sky.addColorStop(0,'#0e0018'); sky.addColorStop(0.55,'#2a0645'); sky.addColorStop(1,'#5a0848');
-  ctx.fillStyle=sky; ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
-  const t=gameTime;
-  // Large flat oval blobs with strings — matching the design exactly
-  const blobs=[
-    {cx:0.19,cy:0.20,rx:200,ry:88,ph:0},      // top-left wide oval
-    {cx:0.82,cy:0.25,rx:175,ry:78,ph:1.7},     // top-right oval
-    {cx:0.50,cy:0.75,rx:215,ry:72,ph:0.9},     // bottom center flat oval
-  ];
-  for(const b of blobs){
-    const bx=b.cx*CANVAS_W, by=(b.cy+Math.sin(t*0.3+b.ph)*0.015)*CANVAS_H;
-    // Oval blob — muted purple with slight inner glow
-    const og=ctx.createRadialGradient(bx,by,15,bx,by,b.rx);
-    og.addColorStop(0,'rgba(160,80,180,0.28)'); og.addColorStop(0.55,'rgba(110,40,140,0.14)'); og.addColorStop(1,'rgba(70,10,100,0)');
-    ctx.beginPath(); ctx.ellipse(bx,by,b.rx,b.ry,0,0,Math.PI*2); ctx.fillStyle=og; ctx.fill();
-    // Subtle inner brighter ring
-    ctx.beginPath(); ctx.ellipse(bx,by,b.rx*0.55,b.ry*0.55,0,0,Math.PI*2);
-    ctx.fillStyle='rgba(180,100,200,0.09)'; ctx.fill();
-    // Small circle where string attaches
-    ctx.beginPath(); ctx.arc(bx,by+b.ry-4,4,0,Math.PI*2); ctx.fillStyle='rgba(200,140,220,0.45)'; ctx.fill();
-    // Curvy string
-    ctx.beginPath(); ctx.moveTo(bx,by+b.ry);
-    ctx.bezierCurveTo(bx+10,by+b.ry+28,bx-6,by+b.ry+55,bx+5,by+b.ry+90);
-    ctx.strokeStyle='rgba(210,150,230,0.35)'; ctx.lineWidth=1.5; ctx.stroke();
-  }
-  // Small floating hearts — pink, scattered, like the design
-  const hpos=[[0.06,0.48],[0.24,0.34],[0.47,0.30],[0.62,0.54],[0.90,0.38],[0.34,0.55],[0.72,0.30],[0.50,0.60],[0.14,0.70],[0.82,0.58],[0.10,0.20],[0.65,0.20]];
-  for(let i=0;i<hpos.length;i++){
-    const hx=((hpos[i][0]+t*0.018*(0.5+i%3*0.3))%1)*CANVAS_W;
-    const hy=((hpos[i][1]+t*0.012*(0.3+i%4*0.2))%1)*CANVAS_H;
-    const hs=6+i%3*4;
-    const ha=0.5+0.3*Math.sin(t*0.8+i*1.2);
-    ctx.save(); ctx.translate(hx,hy); ctx.scale(hs/20,hs/20);
-    ctx.fillStyle=`rgba(210,100,160,${ha})`;
-    ctx.beginPath(); ctx.moveTo(0,4); ctx.bezierCurveTo(-5,-2,-11,1,0,9); ctx.bezierCurveTo(11,1,5,-2,0,4); ctx.fill();
-    ctx.restore();
-  }
-  // Stars — small, white and faint pink like the design
-  for(let i=0;i<55;i++){
-    const sx=(i*181.3)%CANVAS_W, sy=(i*107.9)%(CANVAS_H*0.88);
-    const a=0.25+0.5*Math.sin(t*1.4+i*0.9);
-    ctx.fillStyle=i%4===0?`rgba(255,255,255,${a})`:`rgba(220,160,210,${a*0.7})`;
-    ctx.beginPath(); ctx.arc(sx,sy,i%5===0?1.5:0.8,0,Math.PI*2); ctx.fill();
-  }
-  // Star shapes (✦) in a few spots like the design
-  for(const[sx,sy] of[[0.35,0.46],[0.63,0.46],[0.20,0.57]]){
-    const bx=sx*CANVAS_W, by2=sy*CANVAS_H;
-    const a=0.4+0.2*Math.sin(t*1.2+sx*10);
-    ctx.save(); ctx.translate(bx,by2); ctx.fillStyle=`rgba(200,140,190,${a})`;
-    ctx.font=`${10+Math.round(sx*4)}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('★',0,0); ctx.restore();
-  }
-}
-function drawPackTailMouse(bb,bw,no){
-  if(typeof bb!=='number') return;  // shop passes Float32Array; skip gracefully
-  const ny=bb+no, t=gameTime;
-  const fo=62, fw=bw*0.9;
-  // Outer dark magenta wings
-  const og=ctx.createLinearGradient(0,ny,0,ny+fo);
-  og.addColorStop(0,'rgba(160,20,100,0.95)'); og.addColorStop(0.5,'rgba(130,10,80,0.7)'); og.addColorStop(1,'rgba(80,0,50,0)');
-  ctx.beginPath();
-  ctx.moveTo(-fw,ny);
-  ctx.quadraticCurveTo(-fw*1.45,ny+fo*0.55, -fw*0.5,ny+fo);
-  ctx.lineTo(fw*0.5,ny+fo);
-  ctx.quadraticCurveTo(fw*1.45,ny+fo*0.55, fw,ny);
-  ctx.closePath(); ctx.fillStyle=og; ctx.fill();
-  // Mid pink layer
-  const mg=ctx.createLinearGradient(0,ny,0,ny+fo*0.85);
-  mg.addColorStop(0,'rgba(230,70,160,0.9)'); mg.addColorStop(0.5,'rgba(200,50,140,0.65)'); mg.addColorStop(1,'rgba(160,20,110,0)');
-  ctx.beginPath();
-  ctx.moveTo(-fw*0.72,ny);
-  ctx.quadraticCurveTo(-fw*1.05,ny+fo*0.5, -fw*0.3,ny+fo*0.82);
-  ctx.lineTo(fw*0.3,ny+fo*0.82);
-  ctx.quadraticCurveTo(fw*1.05,ny+fo*0.5, fw*0.72,ny);
-  ctx.closePath(); ctx.fillStyle=mg; ctx.fill();
-  // Inner hot pink
-  const ig=ctx.createLinearGradient(0,ny,0,ny+fo*0.7);
-  ig.addColorStop(0,'rgba(255,120,200,0.95)'); ig.addColorStop(0.6,'rgba(240,80,170,0.6)'); ig.addColorStop(1,'rgba(200,40,140,0)');
-  ctx.beginPath();
-  ctx.moveTo(-fw*0.42,ny);
-  ctx.quadraticCurveTo(-fw*0.58,ny+fo*0.42, -fw*0.12,ny+fo*0.65);
-  ctx.lineTo(fw*0.12,ny+fo*0.65);
-  ctx.quadraticCurveTo(fw*0.58,ny+fo*0.42, fw*0.42,ny);
-  ctx.closePath(); ctx.fillStyle=ig; ctx.fill();
-  // Bright white-pink core
-  const cg=ctx.createLinearGradient(0,ny,0,ny+fo*0.5);
-  cg.addColorStop(0,'rgba(255,240,255,1)'); cg.addColorStop(0.5,'rgba(255,180,230,0.8)'); cg.addColorStop(1,'rgba(255,120,200,0)');
-  ctx.beginPath();
-  ctx.moveTo(-bw*0.18,ny); ctx.lineTo(bw*0.18,ny); ctx.lineTo(0,ny+fo*0.48);
-  ctx.closePath(); ctx.fillStyle=cg; ctx.fill();
-  // Floating bubble dots
-  for(let i=0;i<4;i++){
-    const bx=(i%2===0?-1:1)*fw*(0.55+i*0.08), by2=ny+fo*(0.18+i*0.15);
-    const ba=0.35+0.2*Math.sin(t*2+i*1.4);
-    ctx.beginPath(); ctx.arc(bx,by2,2.5,0,Math.PI*2); ctx.fillStyle=`rgba(255,200,235,${ba})`; ctx.fill();
-  }
-}
-function drawPackRocketMouse(x,y){
-  ctx.save(); ctx.translate(x,y);
-  const bw=22,bh=60,bb=bh/2,bt=-bh/2;
-  const noseH=bh*0.30,bodyTop=bt+noseH;
-
-  // Large oval fins — like the design (big, round, mid-body sides)
-  for(const s of[-1,1]){
-    ctx.beginPath(); ctx.ellipse(s*(bw/2+10),bb-16,11,17,s*0.12,0,Math.PI*2);
-    const fg=ctx.createRadialGradient(s*(bw/2+8),bb-18,2,s*(bw/2+10),bb-16,14);
-    fg.addColorStop(0,'#ff88cc'); fg.addColorStop(1,'#cc2288'); ctx.fillStyle=fg; ctx.fill();
-  }
-
-  // Pink body — cylindrical with side gradient
-  const bodyG=ctx.createLinearGradient(-bw/2,0,bw/2,0);
-  bodyG.addColorStop(0,'#aa2277'); bodyG.addColorStop(0.25,'#ee55aa'); bodyG.addColorStop(0.5,'#ff99cc'); bodyG.addColorStop(0.75,'#ee55aa'); bodyG.addColorStop(1,'#aa2277');
-  ctx.beginPath(); ctx.roundRect(-bw/2,bodyTop,bw,bb-bodyTop,5); ctx.fillStyle=bodyG; ctx.fill();
-
-  // Diagonal candy stripe bands — like the design
-  ctx.save(); ctx.beginPath(); ctx.rect(-bw/2,bodyTop,bw,bb-bodyTop); ctx.clip();
-  for(let si=-2;si<6;si++){
-    const sy=bodyTop+si*(bh*0.14);
-    ctx.fillStyle='rgba(255,170,215,0.35)';
-    ctx.beginPath();
-    ctx.moveTo(-bw/2,sy); ctx.lineTo(bw/2,sy+bh*0.09);
-    ctx.lineTo(bw/2,sy+bh*0.14); ctx.lineTo(-bw/2,sy+bh*0.09*0.6);
-    ctx.closePath(); ctx.fill();
-  }
-  ctx.restore();
-
-  // Nose cone — darker magenta, tapers to point
-  const noseG=ctx.createLinearGradient(-bw/2,bt,bw/2,bt);
-  noseG.addColorStop(0,'#881155'); noseG.addColorStop(0.5,'#cc3388'); noseG.addColorStop(1,'#881155');
-  ctx.beginPath(); ctx.moveTo(-bw/2,bodyTop);
-  ctx.bezierCurveTo(-bw/2,bodyTop-noseH*0.35,-bw*0.08,bt,0,bt);
-  ctx.bezierCurveTo(bw*0.08,bt,bw/2,bodyTop-noseH*0.35,bw/2,bodyTop);
-  ctx.closePath(); ctx.fillStyle=noseG; ctx.fill();
-
-  // Mouse ears — round circles at the BASE of the nose cone, poking out from the sides
-  for(const s of[-1,1]){
-    const ex=s*(bw/2-1), ey=bodyTop+2;
-    const eg=ctx.createRadialGradient(ex-s*2,ey-2,1,ex,ey,8);
-    eg.addColorStop(0,'#ff88cc'); eg.addColorStop(1,'#cc2288');
-    ctx.beginPath(); ctx.arc(ex,ey,8,0,Math.PI*2); ctx.fillStyle=eg; ctx.fill();
-    ctx.beginPath(); ctx.arc(ex,ey,4,0,Math.PI*2); ctx.fillStyle='rgba(255,160,210,0.7)'; ctx.fill();
-  }
-
-  // Porthole ring + mouse face
-  const phY=bodyTop+bh*0.36;
-  ctx.beginPath(); ctx.arc(0,phY,bw*0.38,0,Math.PI*2); ctx.fillStyle='#1a0015'; ctx.fill();
-  const faceG=ctx.createRadialGradient(-2,phY-3,1,0,phY,bw*0.28);
-  faceG.addColorStop(0,'#f2eaea'); faceG.addColorStop(1,'#d4b8c0');
-  ctx.beginPath(); ctx.arc(0,phY,bw*0.28,0,Math.PI*2); ctx.fillStyle=faceG; ctx.fill();
-  // Big round cute eyes
-  for(const s of[-1,1]){
-    ctx.beginPath(); ctx.arc(s*2.6,phY-1.5,2.2,0,Math.PI*2); ctx.fillStyle='#1a0020'; ctx.fill();
-    ctx.beginPath(); ctx.arc(s*2.6+s*0.6,phY-2.2,0.8,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
-  }
-  // Round snout
-  ctx.beginPath(); ctx.arc(0,phY+3,3,0,Math.PI*2); ctx.fillStyle='#e0c0c8'; ctx.fill();
-  ctx.beginPath(); ctx.arc(0,phY+2,1,0,Math.PI*2); ctx.fillStyle='#ff3366'; ctx.fill();
-  // Whiskers
-  ctx.strokeStyle='rgba(100,50,70,0.5)'; ctx.lineWidth=0.7;
-  for(const s of[-1,1]){
-    ctx.beginPath(); ctx.moveTo(s*2,phY+3); ctx.lineTo(s*8,phY+2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(s*2,phY+3.5); ctx.lineTo(s*8,phY+4.5); ctx.stroke();
-  }
-  // Bow on head
-  for(const s of[-1,1]){
-    ctx.beginPath(); ctx.moveTo(0,phY-bw*0.21); ctx.lineTo(s*6,phY-bw*0.30); ctx.lineTo(s*6,phY-bw*0.12); ctx.closePath();
-    ctx.fillStyle='#ff2266'; ctx.fill();
-  }
-  ctx.beginPath(); ctx.arc(0,phY-bw*0.21,2,0,Math.PI*2); ctx.fillStyle='#ff88bb'; ctx.fill();
-
-  // Two hearts on body (like the design)
-  for(const[hx,hy] of[[-5,bodyTop+bh*0.55],[5,bodyTop+bh*0.55]]){
-    ctx.save(); ctx.translate(hx,hy); ctx.scale(0.3,0.3);
-    ctx.fillStyle='rgba(255,180,220,0.75)';
-    ctx.beginPath(); ctx.moveTo(0,5); ctx.bezierCurveTo(-6,-2,-13,2,0,12); ctx.bezierCurveTo(13,2,6,-2,0,5); ctx.fill();
-    ctx.restore();
-  }
-  // Star on lower body (like the design)
-  ctx.fillStyle='rgba(255,200,230,0.8)'; ctx.font='bold 8px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('★',0,bodyTop+bh*0.76);
-
-  // Nozzle
-  ctx.beginPath(); ctx.moveTo(-bw*0.35,bb); ctx.lineTo(bw*0.35,bb); ctx.lineTo(bw*0.42,bb+7); ctx.lineTo(-bw*0.42,bb+7); ctx.closePath();
-  ctx.fillStyle='#550033'; ctx.fill();
-
-  // Diamond sparkle tip
-  ctx.save(); ctx.translate(0,bt-5);
-  ctx.fillStyle='rgba(255,210,240,0.95)';
-  ctx.beginPath(); ctx.moveTo(0,-5.5); ctx.lineTo(1.8,0); ctx.lineTo(6.5,0); ctx.lineTo(1.8,1.2); ctx.lineTo(0,5.5); ctx.lineTo(-1.8,1.2); ctx.lineTo(-6.5,0); ctx.lineTo(-1.8,-1.2); ctx.closePath(); ctx.fill();
-  ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.moveTo(0,-3.5); ctx.lineTo(1.1,0); ctx.lineTo(0,3.5); ctx.lineTo(-1.1,0); ctx.closePath(); ctx.fill();
-  ctx.restore();
-
-  drawPackTailMouse(bb,bw,7);
-  ctx.restore();
-}
-function drawPackMeteorMouse(m){
-  ctx.save(); ctx.translate(m.x,m.y); ctx.rotate(m.rotation);
-  const r=m.rx;
-
-  // Shorter handle — dark grey with grip dots
-  const hlen=r*2.8;
-  const hg=ctx.createLinearGradient(0,-r*0.1,hlen,r*0.1);
-  hg.addColorStop(0,'#555066'); hg.addColorStop(0.5,'#9988aa'); hg.addColorStop(1,'#443355');
-  ctx.beginPath(); ctx.roundRect(r*0.3,-r*0.13,hlen,r*0.26,r*0.1); ctx.fillStyle=hg; ctx.fill();
-  for(let i=1;i<5;i++){
-    ctx.beginPath(); ctx.arc(r*0.3+hlen*(i/5.5),0,r*0.09,0,Math.PI*2);
-    ctx.fillStyle='rgba(200,175,225,0.5)'; ctx.fill();
-  }
-
-  // Big oval head — centred left of handle
-  const hx=0, hy=0, hrx=r*1.35, hry=r*0.88;
-  // Shadow
-  ctx.beginPath(); ctx.ellipse(hx+3,hy+3,hrx,hry,0,0,Math.PI*2); ctx.fillStyle='rgba(60,0,50,0.25)'; ctx.fill();
-  // Main oval — light mauve/pink
-  const og=ctx.createRadialGradient(hx-hrx*0.25,hy-hry*0.25,hry*0.1,hx,hy,hrx);
-  og.addColorStop(0,'#f0c0de'); og.addColorStop(0.55,'#d08abb'); og.addColorStop(1,'#8a4070');
-  ctx.beginPath(); ctx.ellipse(hx,hy,hrx,hry,0,0,Math.PI*2); ctx.fillStyle=og; ctx.fill();
-  // Rim
-  ctx.strokeStyle='rgba(230,160,210,0.6)'; ctx.lineWidth=r*0.08;
-  ctx.beginPath(); ctx.ellipse(hx,hy,hrx,hry,0,0,Math.PI*2); ctx.stroke();
-
-  // Diamond/crystal facet lines overlaid — like the design
-  ctx.save(); ctx.beginPath(); ctx.ellipse(hx,hy,hrx,hry,0,0,Math.PI*2); ctx.clip();
-  ctx.strokeStyle='rgba(200,140,190,0.45)'; ctx.lineWidth=r*0.06;
-  // Facet lines (like a cut gem)
-  const cx=hx, cy=hy;
-  ctx.beginPath(); ctx.moveTo(cx-hrx*0.5,cy-hry); ctx.lineTo(cx,cy); ctx.lineTo(cx+hrx*0.5,cy-hry); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx-hrx,cy); ctx.lineTo(cx,cy); ctx.lineTo(cx-hrx*0.5,cy-hry); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx+hrx,cy); ctx.lineTo(cx,cy); ctx.lineTo(cx+hrx*0.5,cy-hry); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx-hrx*0.5,cy-hry); ctx.lineTo(cx+hrx*0.5,cy-hry); ctx.stroke();
-
-  // Large dark-pink spots — like the design (4-5 big circles)
-  for(const[ox,oy,sr]of[[-hrx*0.38,hry*0.1,r*0.28],[hrx*0.25,hry*0.28,r*0.25],[-hrx*0.1,-hry*0.3,r*0.2],[hrx*0.42,-hry*0.15,r*0.18],[0,hry*0.45,r*0.16]]){
-    ctx.beginPath(); ctx.arc(hx+ox,hy+oy,sr,0,Math.PI*2);
-    ctx.fillStyle='rgba(140,40,90,0.72)'; ctx.fill();
-    // Small highlight on each spot
-    ctx.beginPath(); ctx.arc(hx+ox-sr*0.3,hy+oy-sr*0.3,sr*0.25,0,Math.PI*2);
-    ctx.fillStyle='rgba(230,160,200,0.55)'; ctx.fill();
-  }
-  // Small pink accent dots
-  for(const[ox,oy]of[[hrx*0.55,hry*0.45],[-hrx*0.6,-hry*0.35],[hrx*0.1,-hry*0.52]]){
-    ctx.beginPath(); ctx.arc(hx+ox,hy+oy,r*0.1,0,Math.PI*2);
-    ctx.fillStyle='rgba(255,160,210,0.8)'; ctx.fill();
-  }
-  // Star on the oval — like the design
-  ctx.fillStyle='rgba(255,230,245,0.85)'; ctx.font=`bold ${Math.round(r*0.55)}px serif`;
-  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('★',hx-hrx*0.62,hy-hry*0.05);
-  ctx.restore();
-
-  // Shine highlight
-  ctx.beginPath(); ctx.ellipse(hx-hrx*0.3,hy-hry*0.3,hrx*0.3,hry*0.2,-0.4,0,Math.PI*2);
-  ctx.fillStyle='rgba(255,255,255,0.28)'; ctx.fill();
-
-  ctx.restore();
-}
 
 // ── ST. PATRICK'S pack (Mar 1–31) ─────────────────────────────────────────────
 function drawPackBgStPatricks(){
