@@ -8140,6 +8140,34 @@ function drawStartScreenDesktop() {
     ctx.fillText('LAUNCH ROCKET', CX, btn.y);
   }
 
+  // ── Mode selector chips (desktop center) ────────
+  {
+    const modes = [
+      { mode:'classic', label:'🚀 CLASSIC' },
+      { mode:'timed',   label:'⏱ TIMED' },
+      { mode:'dodge',   label:'☄️ DODGE' },
+    ];
+    const chipW = 96, chipH = 30, gap = 8;
+    const totalW = modes.length * chipW + (modes.length - 1) * gap;
+    const chipY = LAUNCH_BTN.y - LAUNCH_BTN.h / 2 - 18;
+    modeBtns = [];
+    for (let mi = 0; mi < modes.length; mi++) {
+      const { mode, label } = modes[mi];
+      const chipX = CX - totalW / 2 + mi * (chipW + gap);
+      const selected = state.gameMode === mode;
+      modeBtns.push({ mode, x: chipX + chipW/2, y: chipY, w: chipW, h: chipH });
+      ctx.beginPath(); ctx.roundRect(chipX, chipY - chipH/2, chipW, chipH, chipH/2);
+      ctx.fillStyle = selected ? '#ff5c18' : 'rgba(0,0,20,0.55)';
+      ctx.fill();
+      ctx.strokeStyle = selected ? '#ffaa50' : 'rgba(255,255,255,0.2)';
+      ctx.lineWidth = selected ? 2 : 1; ctx.stroke();
+      ctx.fillStyle = selected ? '#ffffff' : 'rgba(200,200,220,0.7)';
+      ctx.font = `bold ${selected ? 11 : 10}px monospace`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(label, chipX + chipW/2, chipY);
+    }
+  }
+
   ctx.textBaseline = 'alphabetic';
 }
 
