@@ -9288,12 +9288,21 @@ function drawRocket(x, y, cfg) {
   if (!cfg) {
     // Check pack rocket IDs first
     const pk = PACKS.find(p => state.equippedRocket === p.id + '_rocket');
-    if (pk) { pk.drawRocket(x, y); return; }
+    if (pk) {
+      // Pack rockets are built at bw≈28; scale up to match the default bw=36
+      ctx.save(); ctx.translate(x, y); ctx.scale(1.28, 1.28); ctx.translate(-x, -y);
+      pk.drawRocket(x, y);
+      ctx.restore(); return;
+    }
   }
   // Use the equipped rocket's colours unless a specific config is passed
   if (!cfg) cfg = ROCKETS.find(r => r.id === state.equippedRocket) || ROCKETS[0];
-  // Custom-shaped rockets delegate to their own draw function
-  if (cfg.drawFn) { cfg.drawFn(x, y); return; }
+  // Custom-shaped rockets delegate to their own draw function (scale up to match default)
+  if (cfg.drawFn) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(1.28, 1.28); ctx.translate(-x, -y);
+    cfg.drawFn(x, y);
+    ctx.restore(); return;
+  }
   ctx.save();
   ctx.translate(x, y);
 
