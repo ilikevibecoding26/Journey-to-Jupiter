@@ -202,7 +202,9 @@ function submitNameEntry(rawName) {
   if (state.ghostPath.length > 5) saveGhostRun(state.ghostPath, state.elapsedTime);
   updateStatsAfterRun(true);
   updateDailyChallengeAfterRun();
+  checkPlayStreak();
   checkAchievements();
+  sfxWin();
   state.firstRunBonus = false;
   state.screen = 'win';
 }
@@ -319,6 +321,87 @@ function sfxBoost() {
   osc.start(); osc.stop(ac.currentTime + 0.5);
 }
 
+function sfxCoin() {
+  if (!settings.soundEnabled) return;
+  const ac = getAudio();
+  const osc = ac.createOscillator(), gain = ac.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(1047, ac.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(1568, ac.currentTime + 0.08);
+  gain.gain.setValueAtTime(0.13, ac.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.18);
+  osc.connect(gain); gain.connect(ac.destination);
+  osc.start(); osc.stop(ac.currentTime + 0.2);
+}
+function sfxCloseCall() {
+  if (!settings.soundEnabled) return;
+  const ac = getAudio();
+  const osc = ac.createOscillator(), gain = ac.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(400, ac.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(200, ac.currentTime + 0.18);
+  gain.gain.setValueAtTime(0.12, ac.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.22);
+  osc.connect(gain); gain.connect(ac.destination);
+  osc.start(); osc.stop(ac.currentTime + 0.25);
+}
+function sfxZoneUp() {
+  if (!settings.soundEnabled) return;
+  const ac = getAudio();
+  const notes = [523, 659, 784, 1047];
+  notes.forEach((freq, i) => {
+    const osc = ac.createOscillator(), gain = ac.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    const t = ac.currentTime + i * 0.10;
+    gain.gain.setValueAtTime(0.13, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    osc.connect(gain); gain.connect(ac.destination);
+    osc.start(t); osc.stop(t + 0.2);
+  });
+}
+function sfxGameOver() {
+  if (!settings.soundEnabled) return;
+  const ac = getAudio();
+  const notes = [392, 349, 294, 220];
+  notes.forEach((freq, i) => {
+    const osc = ac.createOscillator(), gain = ac.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.value = freq;
+    const t = ac.currentTime + i * 0.14;
+    gain.gain.setValueAtTime(0.10, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+    osc.connect(gain); gain.connect(ac.destination);
+    osc.start(t); osc.stop(t + 0.3);
+  });
+}
+function sfxWin() {
+  if (!settings.soundEnabled) return;
+  const ac = getAudio();
+  const notes = [523, 659, 784, 1047, 1319];
+  notes.forEach((freq, i) => {
+    const osc = ac.createOscillator(), gain = ac.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    const t = ac.currentTime + i * 0.11;
+    gain.gain.setValueAtTime(0.14, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    osc.connect(gain); gain.connect(ac.destination);
+    osc.start(t); osc.stop(t + 0.4);
+  });
+}
+function sfxTap() {
+  if (!settings.soundEnabled) return;
+  const ac = getAudio();
+  const osc = ac.createOscillator(), gain = ac.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = 660;
+  gain.gain.setValueAtTime(0.08, ac.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.08);
+  osc.connect(gain); gain.connect(ac.destination);
+  osc.start(); osc.stop(ac.currentTime + 0.1);
+}
+
 // ── Time formatter ────────────────────────────
 function formatTime(seconds) {
   const m  = Math.floor(seconds / 60);
@@ -396,6 +479,24 @@ function checkDailyLogin() {
   localStorage.setItem('jtj_last_login',   today);
   localStorage.setItem('jtj_login_streak', String(newStreak));
   state.dailyBonus = { show: true, coins, streak: newStreak, life: 5.0 };
+}
+function checkPlayStreak() {
+  const today    = getTodayStr();
+  const lastPlay = localStorage.getItem('jtj_last_play_date') || '';
+  if (lastPlay === today) return; // already counted this play day
+  const streak    = parseInt(localStorage.getItem('jtj_play_streak') || '0', 10);
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const newStreak = (lastPlay === yesterday) ? streak + 1 : 1;
+  localStorage.setItem('jtj_last_play_date', today);
+  localStorage.setItem('jtj_play_streak',    String(newStreak));
+  state.playStreak = newStreak;
+  const MILESTONES = { 3: 15, 7: 30, 14: 60, 30: 150 };
+  if (MILESTONES[newStreak]) {
+    const earned = MILESTONES[newStreak];
+    state.coins += earned;
+    saveCoins(state.coins);
+    state.streakMilestone = { show: true, streak: newStreak, coins: earned, life: 5.0 };
+  }
 }
 function checkFirstRunBonus() {
   const today = getTodayStr();
@@ -2733,6 +2834,8 @@ const state = {
   reviveUsed: false, reviveCountdown: 0,
   // "GAME OVER" text egg — tap it 9× for a free revive
   gameOverTaps: 0, gameOverLastTap: 0,
+  playStreak: parseInt(localStorage.getItem('jtj_play_streak') || '0', 10),
+  streakMilestone: { show: false, streak: 0, coins: 0, life: 0 },
   secretFlash: { life: 0, msg: '', sub: '' },  // shared flash banner for new secrets
   customPackCreate: null, // { step:'rocket'|'tail'|'meteor'|'bg', rocket, tail, meteor, bg }
   newAchievements: [],           // achievements unlocked since last start screen visit
@@ -2758,6 +2861,12 @@ const CHALLENGE_POOL = [
   { id:'zone_2',        desc:'Reach Zone 2',                type:'zone',        target:2,  reward:5  },
   { id:'zone_3',        desc:'Reach Zone 3',                type:'zone',        target:3,  reward:8  },
   { id:'no_hit_zone',   desc:'Clear a zone without being hit', type:'no_hit_zone', target:1, reward:10 },
+  // Mode-specific challenges
+  { id:'timed_score_100', desc:'Score 100 in Timed mode',    type:'score',   mode:'timed', target:100, reward:7  },
+  { id:'timed_score_300', desc:'Score 300 in Timed mode',    type:'score',   mode:'timed', target:300, reward:10 },
+  { id:'dodge_survive_30',desc:'Survive 30s in Dodge mode',  type:'survive', mode:'dodge', target:30,  reward:7  },
+  { id:'dodge_survive_60',desc:'Survive 60s in Dodge mode',  type:'survive', mode:'dodge', target:60,  reward:10 },
+  { id:'classic_zone3',   desc:'Reach Zone 3 in Classic',    type:'zone',    mode:'classic',target:3,  reward:8  },
 ];
 function getDailyChallenge() {
   const dayIndex = Math.floor(Date.now() / 86400000); // changes every calendar day
@@ -2775,6 +2884,7 @@ function initDailyChallenge() {
   } else {
     const c = getDailyChallenge();
     state.dailyChallenge = { date: today, id: c.id, desc: c.desc, type: c.type,
+                              mode: c.mode || null,
                               target: c.target, reward: c.reward, progress: 0, completed: false };
     saveDailyChallengeData(state.dailyChallenge);
   }
@@ -2849,6 +2959,7 @@ function updateStatsAfterRun(won) {
 function updateDailyChallengeAfterRun() {
   const dc = state.dailyChallenge;
   if (!dc || dc.completed) return;
+  if (dc.mode && dc.mode !== state.gameMode) return; // wrong mode, skip
   let progress = dc.progress;
   switch (dc.type) {
     case 'survive':     progress = Math.max(progress, state.elapsedTime || 0); break;
@@ -2915,7 +3026,7 @@ function isOverButton(x, y) {
     case 'shop':    return shopButtons.some(shopHit);
     case 'profile': return profileButtons.some(panelHit);
     case 'vip':       return hit(VIP_SUBSCRIBE_BTN) || hit(VIP_BACK_BTN);
-    case 'gameover':  return hit(REVIVE_BTN) || hit(TRY_AGAIN_BTN) || hit(MAIN_MENU_BTN);
+    case 'gameover':  return hit(REVIVE_BTN) || hit(TRY_AGAIN_BTN) || hit(MAIN_MENU_BTN) || hit(SHARE_BTN);
     case 'win':       return hit(WIN_PLAY_BTN) || hit(WIN_MENU_BTN) || hit(NAME_SUBMIT_BTN);
     case 'settings':  return hit(SETTINGS_BACK);
     case 'leaderboard': return hit(LEADERBOARD_BACK);
@@ -3128,16 +3239,18 @@ function handleTap(x, y) {
       }
     }
   }
-  if (state.screen === 'start'       && hitButton(LAUNCH_BTN,       x, y)) beginLaunch();
-  if (state.screen === 'start'       && hitButton(SETTINGS_BTN,     x, y)) state.screen = 'settings';
-  if (state.screen === 'start'       && hitButton(LEADERBOARD_BTN,  x, y)) { state.screen = 'leaderboard'; fetchGlobalLeaderboard(); }
+  if (state.screen === 'start'       && hitButton(LAUNCH_BTN,       x, y)) { sfxTap(); beginLaunch(); }
+  if (state.screen === 'start'       && hitButton(SETTINGS_BTN,     x, y)) { sfxTap(); state.screen = 'settings'; }
+  if (state.screen === 'start'       && hitButton(LEADERBOARD_BTN,  x, y)) { sfxTap(); state.screen = 'leaderboard'; fetchGlobalLeaderboard(); }
   if (state.screen === 'start'       && hitButton(SHOP_BTN,          x, y)) {
+    sfxTap();
     if (state.authUser?.isGuest) { state.signinPrompt = true; return; }
     state.screen = 'shop';
   }
-  if (state.screen === 'start'       && hitButton(PROFILE_BTN,       x, y)) { saveCurrentProfileData(); state.screen = 'profile'; }
-  if (state.screen === 'start'       && hitButton(TUTORIAL_BTN,      x, y)) state.screen = 'tutorial';
+  if (state.screen === 'start'       && hitButton(PROFILE_BTN,       x, y)) { sfxTap(); saveCurrentProfileData(); state.screen = 'profile'; }
+  if (state.screen === 'start'       && hitButton(TUTORIAL_BTN,      x, y)) { sfxTap(); state.screen = 'tutorial'; }
   if (state.screen === 'start'       && hitButton(WHEEL_BTN,         x, y)) {
+    sfxTap();
     if (state.authUser?.isGuest) { state.signinPrompt = true; return; }
     state.wheelShowResult=false; state.screen='wheel';
   }
@@ -3487,8 +3600,9 @@ function handleTap(x, y) {
     }
     return;
   }
-  if (state.screen === 'gameover' && hitButton(TRY_AGAIN_BTN, x, y)) beginLaunch();
-  if (state.screen === 'gameover' && hitButton(MAIN_MENU_BTN, x, y)) goMainMenu();
+  if (state.screen === 'gameover' && hitButton(TRY_AGAIN_BTN, x, y)) { sfxTap(); beginLaunch(); }
+  if (state.screen === 'gameover' && hitButton(MAIN_MENU_BTN, x, y)) { sfxTap(); goMainMenu(); }
+  if (state.screen === 'gameover' && hitButton(SHARE_BTN, x, y)) { sfxTap(); shareScore(); }
   if (state.screen === 'vip' && hitButton(VIP_BACK_BTN, x, y)) { state.screen = 'shop'; state.shopTab = 'packs'; return; }
   if (state.screen === 'vip' && hitButton(VIP_SUBSCRIBE_BTN, x, y)) {
     if (!loadVipStart()) saveVipStart(Date.now()); // record subscription start
@@ -3520,6 +3634,7 @@ let modeBtns = [];  // [{ mode, x, y, w, h }, ...]
 const REVIVE_BTN      = { x: CANVAS_W / 2, y: 552, w: 270, h: 62 };
 const TRY_AGAIN_BTN   = { x: CANVAS_W / 2, y: 636, w: 250, h: 58 };
 const MAIN_MENU_BTN   = { x: CANVAS_W / 2, y: 716, w: 250, h: 58 };
+const SHARE_BTN       = { x: CANVAS_W / 2, y: 796, w: 190, h: 44 };
 const WIN_PLAY_BTN      = { x: CANVAS_W / 2, y: 720, w: 250, h: 58 };
 const NAME_SUBMIT_BTN   = { x: CANVAS_W / 2, y: 530, w: 220, h: 54 };
 const WIN_MENU_BTN      = { x: CANVAS_W / 2, y: 792, w: 250, h: 58 };
@@ -3548,6 +3663,7 @@ function repositionDesktopButtons() {
   REVIVE_BTN.x        = CANVAS_W / 2;
   TRY_AGAIN_BTN.x     = CANVAS_W / 2;
   MAIN_MENU_BTN.x     = CANVAS_W / 2;
+  SHARE_BTN.x         = CANVAS_W / 2;
   WIN_PLAY_BTN.x      = CANVAS_W / 2;
   NAME_SUBMIT_BTN.x   = CANVAS_W / 2;
   WIN_MENU_BTN.x      = CANVAS_W / 2;
@@ -3975,6 +4091,7 @@ function update(delta) {
 
   // Tick daily bonus popup countdown on start screen
   if (state.dailyBonus && state.dailyBonus.life > 0) state.dailyBonus.life -= delta;
+  if (state.streakMilestone && state.streakMilestone.show && state.streakMilestone.life > 0) state.streakMilestone.life -= delta;
   if (state.eggFlash > 0) state.eggFlash -= delta;
   if (state.secretFlash.life > 0) state.secretFlash.life -= delta;
   // Tick achievement popup
@@ -4007,6 +4124,8 @@ function update(delta) {
       state.screen = 'gameover';
       updateStatsAfterRun(false);
       updateDailyChallengeAfterRun();
+      checkPlayStreak();
+      sfxGameOver();
       return;
     }
   }
@@ -4144,8 +4263,10 @@ function update(delta) {
           state.leaderboard = loadLeaderboard();
           updateStatsAfterRun(false);
           updateDailyChallengeAfterRun();
+          checkPlayStreak();
           checkAchievements();
           saveCurrentProfileData();
+          sfxGameOver();
           state.firstRunBonus = false;
           state.screen = 'gameover';
         }
@@ -4153,6 +4274,7 @@ function update(delta) {
         // Close call — near miss!
         m.closeCalled = true;
         state.runCloseCallCount++;
+        sfxCloseCall();
         const earned = 1 * getCoinMult();
         state.coins += earned;
         saveCoins(state.coins);
@@ -4353,6 +4475,7 @@ function update(delta) {
     state.zoneHits = 0;
     // ─────────────────────────────────────────────────
     state.backgroundZone = newZone;
+    sfxZoneUp();
     const label = ZONE_LABELS[newZone - 1] || '';
     if (label) { state.zoneAnnounce.text = label; state.zoneAnnounce.life = 2.5; }
   }
@@ -4927,7 +5050,70 @@ function drawGameOverScreen() {
   // ── MAIN MENU button ──────────────────────────
   drawMenuButton(MAIN_MENU_BTN, 'MAIN MENU', '#1a1a60', '#2828a0', '#8888ff');
 
+  // ── SHARE button ──────────────────────────────
+  drawMenuButton(SHARE_BTN, '📤 SHARE SCORE', '#1a3a3a', '#1a6060', '#88ffee');
+
   ctx.textBaseline = 'alphabetic';
+}
+
+async function shareScore() {
+  const oc = document.createElement('canvas');
+  oc.width = 390; oc.height = 260;
+  const ox = oc.getContext('2d');
+  // Background gradient
+  const grad = ox.createLinearGradient(0, 0, 0, 260);
+  grad.addColorStop(0, '#000318'); grad.addColorStop(1, '#0a0028');
+  ox.fillStyle = grad; ox.fillRect(0, 0, 390, 260);
+  // Stars
+  for (let i = 0; i < 40; i++) {
+    ox.fillStyle = `rgba(255,255,255,${0.2 + Math.random() * 0.5})`;
+    ox.fillRect(Math.random() * 390, Math.random() * 260, 1.5, 1.5);
+  }
+  // Border
+  ox.strokeStyle = '#ff3a3a'; ox.lineWidth = 2;
+  ox.beginPath(); ox.roundRect(6, 6, 378, 248, 16); ox.stroke();
+  // Title
+  ox.fillStyle = '#ffe090'; ox.font = 'bold 22px monospace';
+  ox.textAlign = 'center'; ox.textBaseline = 'middle';
+  ox.fillText('JOURNEY TO JUPITER', 195, 34);
+  // Mode badge
+  const modeLabel = state.gameMode === 'timed' ? '⏱ TIMED' : state.gameMode === 'dodge' ? '☄️ DODGE' : '🚀 CLASSIC';
+  ox.fillStyle = '#8888ff'; ox.font = 'bold 13px monospace';
+  ox.fillText(modeLabel, 195, 60);
+  // Stat
+  if (state.gameMode === 'dodge') {
+    ox.fillStyle = '#aaaacc'; ox.font = 'bold 12px monospace';
+    ox.fillText('SURVIVED', 195, 95);
+    ox.fillStyle = '#ffffff'; ox.font = 'bold 52px monospace';
+    ox.fillText(formatTime(state.elapsedTime), 195, 150);
+  } else {
+    ox.fillStyle = '#aaaacc'; ox.font = 'bold 12px monospace';
+    ox.fillText('SCORE', 195, 95);
+    ox.fillStyle = '#ffffff'; ox.font = 'bold 70px monospace';
+    ox.fillText(String(state.score), 195, 160);
+    if (state.gameMode === 'timed') {
+      ox.fillStyle = '#ddc0ff'; ox.font = 'bold 16px monospace';
+      ox.fillText('in ' + formatTime(state.elapsedTime), 195, 192);
+    }
+  }
+  // Pilot name
+  ox.fillStyle = '#aaaacc'; ox.font = 'bold 12px monospace';
+  ox.fillText(state.pilotName || 'PILOT', 195, 218);
+  ox.fillStyle = '#333355'; ox.font = '10px monospace';
+  ox.fillText('journeytojupiter.app', 195, 244);
+  // Share or download
+  oc.toBlob(async blob => {
+    const file = new File([blob], 'journey-to-jupiter.png', { type: 'image/png' });
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: 'Journey to Jupiter', text: `I scored ${state.score} in ${modeLabel} mode!` }); } catch(e) {}
+    } else {
+      // Desktop fallback — download
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'journey-to-jupiter.png';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+  }, 'image/png');
 }
 
 // ── Revive countdown overlay ──────────────────
@@ -8427,6 +8613,36 @@ function drawStartScreen() {
   ctx.fillText(`🪙 ${coinTotal}`, 22, 36);
   ctx.restore();
 
+  // Play streak badge — below coin balance
+  if (state.playStreak > 0) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath(); ctx.roundRect(12, 60, 94, 28, 14); ctx.fill();
+    ctx.font = 'bold 13px monospace';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = state.playStreak >= 7 ? '#ff8c00' : '#ff6030';
+    ctx.fillText(`🔥 ${state.playStreak}d`, 22, 74);
+    ctx.restore();
+  }
+
+  // Streak milestone popup
+  const sm = state.streakMilestone;
+  if (sm && sm.show && sm.life > 0) {
+    const alpha = Math.min(1, sm.life, (5 - sm.life + 0.4) * 5);
+    const mY = CANVAS_H * 0.42;
+    ctx.save(); ctx.globalAlpha = alpha;
+    ctx.fillStyle = 'rgba(80,40,0,0.92)';
+    ctx.beginPath(); ctx.roundRect(CANVAS_W/2 - 140, mY - 40, 280, 80, 18); ctx.fill();
+    ctx.strokeStyle = '#ff8c00'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(CANVAS_W/2 - 140, mY - 40, 280, 80, 18); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ff8c00'; ctx.font = 'bold 12px monospace';
+    ctx.fillText(`🔥 ${sm.streak}-DAY STREAK!`, CANVAS_W/2, mY - 16, 260);
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 22px monospace';
+    ctx.fillText(`+${sm.coins} COINS EARNED`, CANVAS_W/2, mY + 10, 260);
+    ctx.restore();
+  }
+
   // ── Daily challenge card ─────────────────────
   const dc = state.dailyChallenge;
   if (dc && !state.dailyChallengeHidden) {
@@ -8450,6 +8666,12 @@ function drawStartScreen() {
     ctx.fillStyle = '#ffd700';
     ctx.textAlign = 'right';
     ctx.fillText(dc.completed ? 'DONE!' : `+${dc.reward} coins`, cL + cW - 12, cT + 16);
+    // mode hint (right-aligned, below reward)
+    if (dc.mode && !dc.completed) {
+      const modeHint = dc.mode === 'timed' ? '⏱' : dc.mode === 'dodge' ? '☄️' : '🚀';
+      ctx.font = 'bold 10px monospace'; ctx.fillStyle = '#8888ff';
+      ctx.fillText(modeHint, cL + cW - 12, cT + 30);
+    }
     // description row
     ctx.font = 'bold 13px monospace';
     ctx.fillStyle = dc.completed ? '#aaffcc' : '#ffffff';
