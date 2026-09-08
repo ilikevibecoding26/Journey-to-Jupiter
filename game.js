@@ -2395,20 +2395,20 @@ const ROCKETS = [
     glass: ['#ffddaa', '#ff8844', '#cc3311'],
   },
   // Pack rockets — unlocked via pack purchase
-  {id:'abyss_rocket',   name:'ABYSS SHIP',   cost:0, packId:'abyss',   drawFn:(x,y)=>drawPackRocketAbyss(x,y)},
-  {id:'sakura_rocket',  name:'SAKURA SHIP',  cost:0, packId:'sakura',  drawFn:(x,y)=>drawPackRocketSakura(x,y)},
-  {id:'crystal_rocket', name:'CRYSTAL SHIP', cost:0, packId:'crystal', drawFn:(x,y)=>drawPackRocketCrystal(x,y)},
-  {id:'glacial_rocket', name:'GLACIAL SHIP', cost:0, packId:'glacial', drawFn:(x,y)=>drawPackRocketGlacial(x,y)},
-  {id:'sports_rocket',  name:'SPORTS SHIP',  cost:0, packId:'sports',  drawFn:(x,y)=>drawPackRocketSports(x,y)},
-  {id:'royale_rocket',   name:'ROYALE SHIP',   cost:0, packId:'royale',   drawFn:(x,y)=>drawPackRocketRoyale(x,y)  },
-  {id:'neoncity_rocket', name:'NEON CITY SHIP', cost:0, packId:'neoncity', drawFn:(x,y)=>drawPackRocketNeonCity(x,y)},
-  {id:'candy_rocket',    name:'CANDY SHIP',    cost:0, packId:'candy',    drawFn:(x,y)=>drawPackRocketCandy(x,y)   },
-  {id:'christmas_rocket',   name:'CHRISTMAS SHIP',   cost:0, packId:'christmas',   drawFn:(x,y)=>drawPackRocketChristmas(x,y)},
-  {id:'halloween_rocket',   name:'HALLOWEEN SHIP',   cost:0, packId:'halloween',   drawFn:(x,y)=>drawPackRocketHalloween(x,y)},
-  {id:'valentines_rocket',  name:"VALENTINE'S SHIP", cost:0, packId:'valentines',  drawFn:(x,y)=>drawPackRocketValentines(x,y)},
-  {id:'newyear_rocket',     name:"NEW YEAR'S SHIP",  cost:0, packId:'newyear',     drawFn:(x,y)=>drawPackRocketNewYear(x,y)},
-  {id:'stpatricks_rocket',  name:"ST. PATRICK'S SHIP",cost:0,packId:'stpatricks',  drawFn:(x,y)=>drawPackRocketStPatricks(x,y)},
-  {id:'fourthofjuly_rocket',name:'4TH OF JULY SHIP', cost:0, packId:'fourthofjuly',drawFn:(x,y)=>drawPackRocketFourthOfJuly(x,y)},
+  {id:'abyss_rocket',   name:'ABYSS SHIP',   cost:0, packId:'abyss',       bw:30, drawFn:(x,y)=>drawPackRocketAbyss(x,y)},
+  {id:'sakura_rocket',  name:'SAKURA SHIP',  cost:0, packId:'sakura',      bw:28, drawFn:(x,y)=>drawPackRocketSakura(x,y)},
+  {id:'crystal_rocket', name:'CRYSTAL SHIP', cost:0, packId:'crystal',     bw:26, drawFn:(x,y)=>drawPackRocketCrystal(x,y)},
+  {id:'glacial_rocket', name:'GLACIAL SHIP', cost:0, packId:'glacial',     bw:28, drawFn:(x,y)=>drawPackRocketGlacial(x,y)},
+  {id:'sports_rocket',  name:'SPORTS SHIP',  cost:0, packId:'sports',      bw:26, drawFn:(x,y)=>drawPackRocketSports(x,y)},
+  {id:'royale_rocket',   name:'ROYALE SHIP',   cost:0, packId:'royale',   bw:17, drawFn:(x,y)=>drawPackRocketRoyale(x,y)  },
+  {id:'neoncity_rocket', name:'NEON CITY SHIP', cost:0, packId:'neoncity', bw:16, drawFn:(x,y)=>drawPackRocketNeonCity(x,y)},
+  {id:'candy_rocket',    name:'CANDY SHIP',    cost:0, packId:'candy',    bw:19, drawFn:(x,y)=>drawPackRocketCandy(x,y)   },
+  {id:'christmas_rocket',   name:'CHRISTMAS SHIP',    cost:0, packId:'christmas',   bw:30, drawFn:(x,y)=>drawPackRocketChristmas(x,y)},
+  {id:'halloween_rocket',   name:'HALLOWEEN SHIP',    cost:0, packId:'halloween',   bw:28, drawFn:(x,y)=>drawPackRocketHalloween(x,y)},
+  {id:'valentines_rocket',  name:"VALENTINE'S SHIP",  cost:0, packId:'valentines',  bw:28, drawFn:(x,y)=>drawPackRocketValentines(x,y)},
+  {id:'newyear_rocket',     name:"NEW YEAR'S SHIP",   cost:0, packId:'newyear',     bw:22, drawFn:(x,y)=>drawPackRocketNewYear(x,y)},
+  {id:'stpatricks_rocket',  name:"ST. PATRICK'S SHIP",cost:0, packId:'stpatricks',  bw:26, drawFn:(x,y)=>drawPackRocketStPatricks(x,y)},
+  {id:'fourthofjuly_rocket',name:'4TH OF JULY SHIP',  cost:0, packId:'fourthofjuly',bw:28, drawFn:(x,y)=>drawPackRocketFourthOfJuly(x,y)},
 ];
 
 function loadUnlocked() {
@@ -9297,9 +9297,10 @@ function drawRocket(x, y, cfg) {
   }
   // Use the equipped rocket's colours unless a specific config is passed
   if (!cfg) cfg = ROCKETS.find(r => r.id === state.equippedRocket) || ROCKETS[0];
-  // Custom-shaped rockets delegate to their own draw function (scale up to match default)
+  // Custom-shaped rockets delegate to their own draw function (scale up to match default bw=36)
   if (cfg.drawFn) {
-    ctx.save(); ctx.translate(x, y); ctx.scale(1.28, 1.28); ctx.translate(-x, -y);
+    const sc = 36 / (cfg.bw || 28);
+    ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); ctx.translate(-x, -y);
     cfg.drawFn(x, y);
     ctx.restore(); return;
   }
