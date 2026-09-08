@@ -2048,46 +2048,46 @@ function drawMeteorAlien(m){
 
 // ── PACKS ARRAY ───────────────────────────────────────
 const PACKS=[
-  {id:'abyss',   name:'ABYSS',   emoji:'🌊', cost:800,
+  {id:'abyss',   name:'ABYSS',   emoji:'🌊', cost:800, bw:30,
     drawRocket:drawPackRocketAbyss,  drawTail:drawPackTailAbyss,
     drawBg:drawPackBgAbyss,          drawMeteor:drawPackMeteorAbyss},
-  {id:'sakura',  name:'SAKURA',  emoji:'🌸', cost:800,
+  {id:'sakura',  name:'SAKURA',  emoji:'🌸', cost:800, bw:28,
     drawRocket:drawPackRocketSakura, drawTail:drawPackTailSakura,
     drawBg:drawPackBgSakura,         drawMeteor:drawPackMeteorSakura},
-  {id:'crystal', name:'CRYSTAL', emoji:'💎', cost:800,
+  {id:'crystal', name:'CRYSTAL', emoji:'💎', cost:800, bw:26,
     drawRocket:drawPackRocketCrystal,drawTail:drawPackTailCrystal,
     drawBg:drawPackBgCrystal,        drawMeteor:drawPackMeteorCrystal},
-  {id:'glacial', name:'GLACIAL', emoji:'❄️', cost:800,
+  {id:'glacial', name:'GLACIAL', emoji:'❄️', cost:800, bw:28,
     drawRocket:drawPackRocketGlacial,drawTail:drawPackTailGlacial,
     drawBg:drawPackBgGlacial,        drawMeteor:drawPackMeteorGlacial},
-  {id:'sports',  name:'SPORTS',  emoji:'🏆', cost:800,
+  {id:'sports',  name:'SPORTS',  emoji:'🏆', cost:800, bw:26,
     drawRocket:drawPackRocketSports, drawTail:drawPackTailSports,
     drawBg:drawPackBgSports,         drawMeteor:drawPackMeteorSports},
-  {id:'royale',  name:'ROYALE',  emoji:'👑', cost:0, vip:true, vipMonth:1,
+  {id:'royale',  name:'ROYALE',  emoji:'👑', cost:0, vip:true, vipMonth:1, bw:17,
     drawRocket:drawPackRocketRoyale, drawTail:drawPackTailRoyale,
     drawBg:drawPackBgRoyale,         drawMeteor:drawPackMeteorRoyale},
-  {id:'neoncity',name:'NEON CITY',emoji:'🌆',cost:0, vip:true, vipMonth:2,
+  {id:'neoncity',name:'NEON CITY',emoji:'🌆',cost:0, vip:true, vipMonth:2, bw:16,
     drawRocket:drawPackRocketNeonCity, drawTail:drawPackTailNeonCity,
     drawBg:drawPackBgNeonCity,         drawMeteor:drawPackMeteorNeonCity},
-  {id:'candy',   name:'CANDY',   emoji:'🍬',cost:0, vip:true, vipMonth:3,
+  {id:'candy',   name:'CANDY',   emoji:'🍬',cost:0, vip:true, vipMonth:3, bw:19,
     drawRocket:drawPackRocketCandy,    drawTail:drawPackTailCandy,
     drawBg:drawPackBgCandy,            drawMeteor:drawPackMeteorCandy},
-  {id:'christmas',    name:'CHRISTMAS',    emoji:'🎄', cost:0, season:{start:{month:12,day:1},end:{month:12,day:31}},
+  {id:'christmas',    name:'CHRISTMAS',    emoji:'🎄', cost:0, bw:30, season:{start:{month:12,day:1},end:{month:12,day:31}},
     drawRocket:drawPackRocketChristmas,    drawTail:drawPackTailChristmas,
     drawBg:drawPackBgChristmas,            drawMeteor:drawPackMeteorChristmas},
-  {id:'halloween',    name:'HALLOWEEN',    emoji:'🎃', cost:0, season:{start:{month:10,day:1},end:{month:10,day:31}},
+  {id:'halloween',    name:'HALLOWEEN',    emoji:'🎃', cost:0, bw:28, season:{start:{month:10,day:1},end:{month:10,day:31}},
     drawRocket:drawPackRocketHalloween,    drawTail:drawPackTailHalloween,
     drawBg:drawPackBgHalloween,            drawMeteor:drawPackMeteorHalloween},
-  {id:'valentines',   name:"VALENTINE'S",  emoji:'💘', cost:0, season:{start:{month:2,day:1},end:{month:2,day:28}},
+  {id:'valentines',   name:"VALENTINE'S",  emoji:'💘', cost:0, bw:28, season:{start:{month:2,day:1},end:{month:2,day:28}},
     drawRocket:drawPackRocketValentines,   drawTail:drawPackTailValentines,
     drawBg:drawPackBgValentines,           drawMeteor:drawPackMeteorValentines},
-  {id:'newyear',      name:"NEW YEAR'S",   emoji:'🎆', cost:0, season:{start:{month:1,day:1},end:{month:1,day:31}},
+  {id:'newyear',      name:"NEW YEAR'S",   emoji:'🎆', cost:0, bw:22, season:{start:{month:1,day:1},end:{month:1,day:31}},
     drawRocket:drawPackRocketNewYear,      drawTail:drawPackTailNewYear,
     drawBg:drawPackBgNewYear,              drawMeteor:drawPackMeteorNewYear},
-  {id:'stpatricks',   name:"ST. PATRICK'S",emoji:'🍀', cost:0, season:{start:{month:3,day:1},end:{month:3,day:31}},
+  {id:'stpatricks',   name:"ST. PATRICK'S",emoji:'🍀', cost:0, bw:26, season:{start:{month:3,day:1},end:{month:3,day:31}},
     drawRocket:drawPackRocketStPatricks,   drawTail:drawPackTailStPatricks,
     drawBg:drawPackBgStPatricks,           drawMeteor:drawPackMeteorStPatricks},
-  {id:'fourthofjuly', name:'4TH OF JULY',  emoji:'🎆', cost:0, season:{start:{month:7,day:1},end:{month:7,day:31}},
+  {id:'fourthofjuly', name:'4TH OF JULY',  emoji:'🎆', cost:0, bw:28, season:{start:{month:7,day:1},end:{month:7,day:31}},
     drawRocket:drawPackRocketFourthOfJuly, drawTail:drawPackTailFourthOfJuly,
     drawBg:drawPackBgFourthOfJuly,         drawMeteor:drawPackMeteorFourthOfJuly},
 ];
@@ -9289,8 +9289,9 @@ function drawRocket(x, y, cfg) {
     // Check pack rocket IDs first
     const pk = PACKS.find(p => state.equippedRocket === p.id + '_rocket');
     if (pk) {
-      // Pack rockets are built at bw≈28; scale up to match the default bw=36
-      ctx.save(); ctx.translate(x, y); ctx.scale(1.28, 1.28); ctx.translate(-x, -y);
+      // Scale each pack rocket so its visual size matches the default bw=36 rocket
+      const sc = 36 / (pk.bw || 28);
+      ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); ctx.translate(-x, -y);
       pk.drawRocket(x, y);
       ctx.restore(); return;
     }
