@@ -15,9 +15,8 @@ html, body {
 }
 
 #gameCanvas {
-  /* Use svh (small viewport height) so Safari's address bar doesn't cut off the game */
-  width: min(100vw, calc(100svh * 390 / 844));
-  height: min(100svh, calc(100vw * 844 / 390));
+  width: 100vw;
+  height: 100svh;
   display: block;
   image-rendering: pixelated;
 }
