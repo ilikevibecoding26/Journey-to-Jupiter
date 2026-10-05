@@ -155,15 +155,16 @@ function showNameInput(maxLen) {
   el.style.display = 'block';
   // Position over the canvas input zone
   function positionInput() {
-    const rect  = canvas.getBoundingClientRect();
-    const scale = rect.width / CANVAS_W;
-    const w = Math.round(220 * scale);
-    const h = Math.round(48 * scale);
-    el.style.left     = Math.round(rect.left + (CANVAS_W / 2 - 110) * scale) + 'px';
-    el.style.top      = Math.round(rect.top  + 430 * scale) + 'px';
+    const rect   = canvas.getBoundingClientRect();
+    const scaleX = rect.width  / CANVAS_W;
+    const scaleY = rect.height / CANVAS_H;
+    const w = Math.round(220 * scaleX);
+    const h = Math.round(48  * scaleY);
+    el.style.left     = Math.round(rect.left + (CANVAS_W / 2 - 110) * scaleX) + 'px';
+    el.style.top      = Math.round(rect.top  + 430 * scaleY) + 'px';
     el.style.width    = w + 'px';
     el.style.height   = h + 'px';
-    el.style.fontSize = Math.round(18 * scale) + 'px';
+    el.style.fontSize = Math.round(18 * scaleX) + 'px';
     el.style.padding  = Math.round(8 * scale) + 'px ' + Math.round(12 * scale) + 'px';
   }
   positionInput();
@@ -3073,13 +3074,14 @@ function inArrowBtn(btn, cx, cy) {
 }
 
 function updateArrowTouches(e) {
-  const rect  = canvas.getBoundingClientRect();
-  const scale = rect.width / CANVAS_W;
+  const rect   = canvas.getBoundingClientRect();
+  const scaleX = rect.width  / CANVAS_W;
+  const scaleY = rect.height / CANVAS_H;
   arrowTouch.left  = false;
   arrowTouch.right = false;
   for (const t of e.touches) {
-    const cx = (t.clientX - rect.left) / scale;
-    const cy = (t.clientY - rect.top)  / scale;
+    const cx = (t.clientX - rect.left) / scaleX;
+    const cy = (t.clientY - rect.top)  / scaleY;
     if (inArrowBtn(ARROW_L, cx, cy)) arrowTouch.left  = true;
     if (inArrowBtn(ARROW_R, cx, cy)) arrowTouch.right = true;
   }
@@ -3103,8 +3105,8 @@ canvas.addEventListener('touchmove', e => {
   const newY = e.touches[0].clientY;
   if (state.screen === 'shop') {
     const rect  = canvas.getBoundingClientRect();
-    const scale = rect.width / CANVAS_W;
-    const dy = (touch.currentY - newY) / scale;
+    const scaleY = rect.height / CANVAS_H;
+    const dy = (touch.currentY - newY) / scaleY;
     if (Math.abs(dy) > 1) { touch.didScroll = true; state.shopScrollY += dy; clampShopScroll(); }
   }
   touch.currentY = newY;
@@ -3117,9 +3119,10 @@ canvas.addEventListener('touchend', e => {
   if (touch.didScroll) { touch.didScroll = false; return; }
   // Only fire handleTap if the lift wasn't on an arrow button
   const rect  = canvas.getBoundingClientRect();
-  const scale = rect.width / CANVAS_W;
-  const tx = (e.changedTouches[0].clientX - rect.left) / scale;
-  const ty = (e.changedTouches[0].clientY - rect.top)  / scale;
+  const scaleX = rect.width  / CANVAS_W;
+  const scaleY = rect.height / CANVAS_H;
+  const tx = (e.changedTouches[0].clientX - rect.left) / scaleX;
+  const ty = (e.changedTouches[0].clientY - rect.top)  / scaleY;
   if (state.screen === 'playing' && (inArrowBtn(ARROW_L, tx, ty) || inArrowBtn(ARROW_R, tx, ty))) return;
   handleTap(tx, ty);
 }, { passive: false });
@@ -3130,8 +3133,9 @@ canvas.addEventListener('click', e => {
     handleTap(e.clientX, e.clientY);
   } else {
     const rect  = canvas.getBoundingClientRect();
-    const scale = rect.width / CANVAS_W;
-    handleTap((e.clientX - rect.left) / scale, (e.clientY - rect.top) / scale);
+    const scaleX = rect.width  / CANVAS_W;
+    const scaleY = rect.height / CANVAS_H;
+    handleTap((e.clientX - rect.left) / scaleX, (e.clientY - rect.top) / scaleY);
   }
 });
 
@@ -3143,8 +3147,8 @@ canvas.addEventListener('wheel', e => {
     state.shopScrollY += e.deltaY;
   } else {
     const rect  = canvas.getBoundingClientRect();
-    const scale = rect.width / CANVAS_W;
-    state.shopScrollY += e.deltaY / scale;
+    const scaleY = rect.height / CANVAS_H;
+    state.shopScrollY += e.deltaY / scaleY;
   }
   clampShopScroll();
 }, { passive: false });
