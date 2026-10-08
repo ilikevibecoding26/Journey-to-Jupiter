@@ -87,6 +87,7 @@ const PORT_W = 390;   // internal portrait width used for panel screens
 
 // Letterbox transform that maps logical game coords onto the physical canvas.
 let gameScale = 1, gameOffsetX = 0, gameOffsetY = 0;
+let canvasReady = false;   // true after full load; button vars exist by then
 
 function syncCanvasSize() {
   const w = window.innerWidth;
@@ -97,7 +98,7 @@ function syncCanvasSize() {
     canvas.width  = w;
     canvas.height = h;
     gameScale = 1; gameOffsetX = 0; gameOffsetY = 0;
-    if (typeof repositionDesktopButtons === 'function') repositionDesktopButtons();
+    if (canvasReady) repositionDesktopButtons();
   } else {
     // Mobile portrait: size canvas to real viewport, letterbox 390×844 inside it
     canvas.width  = w;
@@ -108,7 +109,7 @@ function syncCanvasSize() {
   }
 }
 syncCanvasSize();
-window.addEventListener('load',   syncCanvasSize);
+window.addEventListener('load',   () => { canvasReady = true; syncCanvasSize(); });
 window.addEventListener('resize', syncCanvasSize);
 // Reload on iPad orientation change so isTabletLandscape is re-evaluated
 if (isTabletLandscape || (!isDesktop && window.innerWidth >= 768)) {
@@ -4526,14 +4527,19 @@ function update(delta) {
 }
 
 function draw() {
-  // Fill the whole physical canvas (letterbox bars if aspect ratio differs)
-  ctx.fillStyle = '#000008';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  // Apply letterbox transform so all drawing uses the 390×844 logical coords.
-  // try/finally guarantees ctx.restore() even when early returns are hit.
-  ctx.save();
-  ctx.translate(gameOffsetX, gameOffsetY);
-  ctx.scale(gameScale, gameScale);
+  if (isLandscape) {
+    // Desktop / tablet-landscape: original clear, no transform needed
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+  } else {
+    // Mobile portrait: fill full physical canvas (letterbox bars area)
+    // then apply the letterbox transform into 390×844 logical space.
+    ctx.fillStyle = '#000008';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.translate(gameOffsetX, gameOffsetY);
+    ctx.scale(gameScale, gameScale);
+  }
+  // try/finally ensures ctx.restore() fires even on early returns (mobile path only).
   try {
 
   if (state.screen === 'auth') {
@@ -4731,7 +4737,7 @@ function draw() {
   if (state.secretFlash.life > 0) drawSecretFlash();
 
   } finally {
-    ctx.restore(); // end letterbox transform
+    if (!isLandscape) ctx.restore(); // end letterbox transform
   }
 }
 
