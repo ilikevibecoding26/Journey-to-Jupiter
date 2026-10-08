@@ -15,8 +15,11 @@ html, body {
 }
 
 #gameCanvas {
-  width: 100vw;
-  height: 100svh;
+  /* Maintain 390:844 ratio — fills as much of the screen as possible.
+     dvh tracks the viewport dynamically so the canvas expands when
+     Safari's address bar scrolls away. As a PWA it fills perfectly. */
+  width: min(100vw, calc(100dvh * 390 / 844));
+  height: min(100dvh, calc(100vw * 844 / 390));
   display: block;
   image-rendering: pixelated;
 }
