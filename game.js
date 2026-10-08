@@ -79,25 +79,39 @@ const isLandscape = isDesktop || isTabletLandscape;
 const TAP = isDesktop ? 'Click' : 'Tap';   // sentence-case (input method, not layout)
 const tap = isDesktop ? 'click' : 'tap';   // lowercase
 
-// On landscape devices: full viewport. On mobile: portrait strip.
+// Logical game dimensions — all drawing uses these coordinates.
+// For landscape these update with the window; for portrait they stay 390×844.
 let CANVAS_W = isLandscape ? window.innerWidth  : 390;
 let CANVAS_H = isLandscape ? window.innerHeight : 844;
-canvas.width  = CANVAS_W;
-canvas.height = CANVAS_H;
-const PORT_W  = 390;   // internal portrait width used for panel screens
+const PORT_W = 390;   // internal portrait width used for panel screens
 
-// Re-run when the page fully loads or is resized (fixes zero-dimensions at startup)
-function initCanvasForDesktop() {
-  if (!isLandscape) return;
-  CANVAS_W = window.innerWidth;
-  CANVAS_H = window.innerHeight;
-  canvas.width  = CANVAS_W;
-  canvas.height = CANVAS_H;
-  // repositionDesktopButtons is defined later in the file — call it if ready
-  if (typeof repositionDesktopButtons === 'function') repositionDesktopButtons();
+// Letterbox transform that maps logical game coords onto the physical canvas.
+let gameScale = 1, gameOffsetX = 0, gameOffsetY = 0;
+
+function syncCanvasSize() {
+  const vp = window.visualViewport;
+  const w  = vp ? Math.round(vp.width)  : window.innerWidth;
+  const h  = vp ? Math.round(vp.height) : window.innerHeight;
+  if (isLandscape) {
+    // Desktop / tablet-landscape: game coords == screen coords, no transform
+    CANVAS_W = w; CANVAS_H = h;
+    canvas.width  = w;
+    canvas.height = h;
+    gameScale = 1; gameOffsetX = 0; gameOffsetY = 0;
+    if (typeof repositionDesktopButtons === 'function') repositionDesktopButtons();
+  } else {
+    // Mobile portrait: size canvas to real viewport, letterbox 390×844 inside it
+    canvas.width  = w;
+    canvas.height = h;
+    gameScale   = Math.min(w / CANVAS_W, h / CANVAS_H);
+    gameOffsetX = (w - CANVAS_W * gameScale) / 2;
+    gameOffsetY = (h - CANVAS_H * gameScale) / 2;
+  }
 }
-window.addEventListener('load', initCanvasForDesktop);
-window.addEventListener('resize', initCanvasForDesktop);
+syncCanvasSize();
+window.addEventListener('load',   syncCanvasSize);
+window.addEventListener('resize', syncCanvasSize);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', syncCanvasSize);
 // Reload on iPad orientation change so isTabletLandscape is re-evaluated
 if (isTabletLandscape || (!isDesktop && window.innerWidth >= 768)) {
   window.addEventListener('orientationchange', () => location.reload());
@@ -155,16 +169,14 @@ function showNameInput(maxLen) {
   el.style.display = 'block';
   // Position over the canvas input zone
   function positionInput() {
-    const rect   = canvas.getBoundingClientRect();
-    const scaleX = rect.width  / CANVAS_W;
-    const scaleY = rect.height / CANVAS_H;
-    const w = Math.round(220 * scaleX);
-    const h = Math.round(48  * scaleY);
-    el.style.left     = Math.round(rect.left + (CANVAS_W / 2 - 110) * scaleX) + 'px';
-    el.style.top      = Math.round(rect.top  + 430 * scaleY) + 'px';
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.round(220 * gameScale);
+    const h = Math.round(48  * gameScale);
+    el.style.left     = Math.round(rect.left + gameOffsetX + (CANVAS_W / 2 - 110) * gameScale) + 'px';
+    el.style.top      = Math.round(rect.top  + gameOffsetY + 430 * gameScale) + 'px';
     el.style.width    = w + 'px';
     el.style.height   = h + 'px';
-    el.style.fontSize = Math.round(18 * scaleX) + 'px';
+    el.style.fontSize = Math.round(18 * gameScale) + 'px';
     el.style.padding  = Math.round(8 * scale) + 'px ' + Math.round(12 * scale) + 'px';
   }
   positionInput();
@@ -3074,14 +3086,12 @@ function inArrowBtn(btn, cx, cy) {
 }
 
 function updateArrowTouches(e) {
-  const rect   = canvas.getBoundingClientRect();
-  const scaleX = rect.width  / CANVAS_W;
-  const scaleY = rect.height / CANVAS_H;
+  const rect = canvas.getBoundingClientRect();
   arrowTouch.left  = false;
   arrowTouch.right = false;
   for (const t of e.touches) {
-    const cx = (t.clientX - rect.left) / scaleX;
-    const cy = (t.clientY - rect.top)  / scaleY;
+    const cx = (t.clientX - rect.left - gameOffsetX) / gameScale;
+    const cy = (t.clientY - rect.top  - gameOffsetY) / gameScale;
     if (inArrowBtn(ARROW_L, cx, cy)) arrowTouch.left  = true;
     if (inArrowBtn(ARROW_R, cx, cy)) arrowTouch.right = true;
   }
@@ -3105,8 +3115,7 @@ canvas.addEventListener('touchmove', e => {
   const newY = e.touches[0].clientY;
   if (state.screen === 'shop') {
     const rect  = canvas.getBoundingClientRect();
-    const scaleY = rect.height / CANVAS_H;
-    const dy = (touch.currentY - newY) / scaleY;
+    const dy = (touch.currentY - newY) / gameScale;
     if (Math.abs(dy) > 1) { touch.didScroll = true; state.shopScrollY += dy; clampShopScroll(); }
   }
   touch.currentY = newY;
@@ -3119,10 +3128,8 @@ canvas.addEventListener('touchend', e => {
   if (touch.didScroll) { touch.didScroll = false; return; }
   // Only fire handleTap if the lift wasn't on an arrow button
   const rect  = canvas.getBoundingClientRect();
-  const scaleX = rect.width  / CANVAS_W;
-  const scaleY = rect.height / CANVAS_H;
-  const tx = (e.changedTouches[0].clientX - rect.left) / scaleX;
-  const ty = (e.changedTouches[0].clientY - rect.top)  / scaleY;
+  const tx = (e.changedTouches[0].clientX - rect.left - gameOffsetX) / gameScale;
+  const ty = (e.changedTouches[0].clientY - rect.top  - gameOffsetY) / gameScale;
   if (state.screen === 'playing' && (inArrowBtn(ARROW_L, tx, ty) || inArrowBtn(ARROW_R, tx, ty))) return;
   handleTap(tx, ty);
 }, { passive: false });
@@ -3133,9 +3140,8 @@ canvas.addEventListener('click', e => {
     handleTap(e.clientX, e.clientY);
   } else {
     const rect  = canvas.getBoundingClientRect();
-    const scaleX = rect.width  / CANVAS_W;
-    const scaleY = rect.height / CANVAS_H;
-    handleTap((e.clientX - rect.left) / scaleX, (e.clientY - rect.top) / scaleY);
+    handleTap((e.clientX - rect.left - gameOffsetX) / gameScale,
+             (e.clientY - rect.top  - gameOffsetY) / gameScale);
   }
 });
 
@@ -3147,8 +3153,7 @@ canvas.addEventListener('wheel', e => {
     state.shopScrollY += e.deltaY;
   } else {
     const rect  = canvas.getBoundingClientRect();
-    const scaleY = rect.height / CANVAS_H;
-    state.shopScrollY += e.deltaY / scaleY;
+    state.shopScrollY += e.deltaY / gameScale;
   }
   clampShopScroll();
 }, { passive: false });
@@ -4523,7 +4528,13 @@ function update(delta) {
 }
 
 function draw() {
-  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+  // Fill the whole physical canvas (letterbox bars if aspect ratio differs)
+  ctx.fillStyle = '#000008';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Apply letterbox transform so all drawing uses the 390×844 logical coords
+  ctx.save();
+  ctx.translate(gameOffsetX, gameOffsetY);
+  ctx.scale(gameScale, gameScale);
 
   if (state.screen === 'auth') {
     if (isLandscape) drawAuthScreenLandscape();
@@ -4718,6 +4729,8 @@ function draw() {
 
   // ── Secret flash (also visible during gameplay / countdown) ──
   if (state.secretFlash.life > 0) drawSecretFlash();
+
+  ctx.restore(); // end letterbox transform
 }
 
 

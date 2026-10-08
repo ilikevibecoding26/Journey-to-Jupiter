@@ -15,29 +15,16 @@ html, body {
 }
 
 #gameCanvas {
-  /* Maintain 390:844 ratio — fills as much of the screen as possible.
-     dvh tracks the viewport dynamically so the canvas expands when
-     Safari's address bar scrolls away. As a PWA it fills perfectly. */
-  width: min(100vw, calc(100dvh * 390 / 844));
-  height: min(100dvh, calc(100vw * 844 / 390));
+  /* Canvas fills the full viewport; letterboxing is handled in JS.
+     This prevents CSS from stretching or shrinking the canvas unevenly. */
+  width: 100vw;
+  height: 100dvh;
   display: block;
   image-rendering: pixelated;
 }
 
-/* On desktop (mouse/hover device): fill the full viewport, no black bars */
-@media (hover: hover) and (pointer: fine) {
-  #gameCanvas {
-    width: 100vw;
-    height: 100svh;
-    image-rendering: auto;
-  }
-}
-
-/* On tablet in landscape (iPad etc.): also fill the full viewport */
-@media (hover: none) and (min-width: 768px) and (orientation: landscape) {
-  #gameCanvas {
-    width: 100vw;
-    height: 100svh;
-    image-rendering: auto;
-  }
+/* On desktop/tablet: smooth scaling (no pixel-art look needed at large sizes) */
+@media (hover: hover) and (pointer: fine),
+       (hover: none) and (min-width: 768px) and (orientation: landscape) {
+  #gameCanvas { image-rendering: auto; }
 }
