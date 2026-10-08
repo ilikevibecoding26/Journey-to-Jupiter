@@ -89,9 +89,8 @@ const PORT_W = 390;   // internal portrait width used for panel screens
 let gameScale = 1, gameOffsetX = 0, gameOffsetY = 0;
 
 function syncCanvasSize() {
-  const vp = window.visualViewport;
-  const w  = vp ? Math.round(vp.width)  : window.innerWidth;
-  const h  = vp ? Math.round(vp.height) : window.innerHeight;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
   if (isLandscape) {
     // Desktop / tablet-landscape: game coords == screen coords, no transform
     CANVAS_W = w; CANVAS_H = h;
@@ -111,7 +110,6 @@ function syncCanvasSize() {
 syncCanvasSize();
 window.addEventListener('load',   syncCanvasSize);
 window.addEventListener('resize', syncCanvasSize);
-if (window.visualViewport) window.visualViewport.addEventListener('resize', syncCanvasSize);
 // Reload on iPad orientation change so isTabletLandscape is re-evaluated
 if (isTabletLandscape || (!isDesktop && window.innerWidth >= 768)) {
   window.addEventListener('orientationchange', () => location.reload());
