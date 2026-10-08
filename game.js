@@ -4529,10 +4529,12 @@ function draw() {
   // Fill the whole physical canvas (letterbox bars if aspect ratio differs)
   ctx.fillStyle = '#000008';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  // Apply letterbox transform so all drawing uses the 390×844 logical coords
+  // Apply letterbox transform so all drawing uses the 390×844 logical coords.
+  // try/finally guarantees ctx.restore() even when early returns are hit.
   ctx.save();
   ctx.translate(gameOffsetX, gameOffsetY);
   ctx.scale(gameScale, gameScale);
+  try {
 
   if (state.screen === 'auth') {
     if (isLandscape) drawAuthScreenLandscape();
@@ -4728,7 +4730,9 @@ function draw() {
   // ── Secret flash (also visible during gameplay / countdown) ──
   if (state.secretFlash.life > 0) drawSecretFlash();
 
-  ctx.restore(); // end letterbox transform
+  } finally {
+    ctx.restore(); // end letterbox transform
+  }
 }
 
 
