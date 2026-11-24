@@ -94,7 +94,9 @@ function syncCanvasSize() {
   const h = window.innerHeight;
   if (isLandscape) {
     // Desktop / tablet-landscape: game coords == screen coords, no transform
+    const sizeChanged = (w !== CANVAS_W || h !== CANVAS_H);
     CANVAS_W = w; CANVAS_H = h;
+    if (canvasReady && sizeChanged) rescatterStars();
     canvas.width  = w;
     canvas.height = h;
     gameScale = 1; gameOffsetX = 0; gameOffsetY = 0;
@@ -3869,6 +3871,12 @@ const starsNear = [];
   }
 })();
 
+// Spread stars across the current canvas (called on resize so they never clump into rows)
+function rescatterStars() {
+  for (const s of starsFar)  { s.x = Math.random() * CANVAS_W; s.y = Math.random() * CANVAS_H; }
+  for (const s of starsNear) { s.x = Math.random() * CANVAS_W; s.y = Math.random() * CANVAS_H; }
+}
+
 // ── Meteor config ─────────────────────────────
 // ── Meteor types ──────────────────────────────
 //   normal : standard mixed sizes
@@ -4517,8 +4525,8 @@ function update(delta) {
 
   // Scroll background stars downward (parallax) — boosted during speed boost
   const scrollMult = (1 + (state.backgroundZone - 1) * 0.22) * boostMult;
-  for (const s of starsFar)  { s.y += SCROLL_SPEED * 0.3 * scrollMult * delta; if (s.y > CANVAS_H) { s.y = 0; s.x = Math.random() * CANVAS_W; } }
-  for (const s of starsNear) { s.y += SCROLL_SPEED * 0.6 * scrollMult * delta; if (s.y > CANVAS_H) { s.y = 0; s.x = Math.random() * CANVAS_W; } }
+  for (const s of starsFar)  { s.y += SCROLL_SPEED * 0.3 * scrollMult * delta; if (s.y > CANVAS_H) { s.y = -Math.random() * CANVAS_H * 0.3; s.x = Math.random() * CANVAS_W; } }
+  for (const s of starsNear) { s.y += SCROLL_SPEED * 0.6 * scrollMult * delta; if (s.y > CANVAS_H) { s.y = -Math.random() * CANVAS_H * 0.3; s.x = Math.random() * CANVAS_W; } }
 
   // Move rocket
   rocket.x += rocket.vx * delta;
